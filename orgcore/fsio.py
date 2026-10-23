@@ -55,6 +55,21 @@ def file_lock(target: Path, timeout: float = LOCK_TIMEOUT_SECONDS):
         os.close(fd)
 
 
+def held_elsewhere(target: Path) -> bool:
+    """True if another open file description (usually another process) holds the lock for `target` right now."""
+    lock_path = target.with_name(target.name + ".lock")
+    if not lock_path.exists():
+        return False
+    fd = os.open(lock_path, os.O_RDWR)
+    try:
+        if _try_lock(fd):
+            _unlock(fd)
+            return False
+        return True
+    finally:
+        os.close(fd)
+
+
 def atomic_write(path: Path, data: bytes) -> None:
     """Write to a temp file in the same directory, fsync, then replace. A crash leaves the old or the new file, never half."""
     path.parent.mkdir(parents=True, exist_ok=True)

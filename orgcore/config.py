@@ -89,7 +89,9 @@ SCHEMAS = {
             "reserve_percent": _num(ge=0, le=100),
             "max_share_percent": _num(gt=0, le=100),
             "max_observation_age_minutes": {"t": "int", "ge": 1},
-        }), min=1),
+            "length_hours": _num(gt=0),  # optional: with pacing_slack_percent turns on the pacing line
+            "pacing_slack_percent": _num(ge=0, le=100),
+        }, optional=("length_hours", "pacing_slack_percent")), min=1),
         "hard_gates": _obj({key: {"t": "bool", "const": True}
                             for key in ("external_contact", "deploy", "trading", "purchases")}),
         "rules": _obj({"text": _str(min=1), "version": {"t": "int", "ge": 1}}),
@@ -191,6 +193,9 @@ def _cross_check(name: str, data: dict, errors: list[str]) -> None:
         names = [w.get("name") for w in data.get("subscription_windows", []) if isinstance(w, dict)]
         if len(names) != len(set(names)):
             errors.append(f"{name}: duplicate subscription window name")
+        for window in data.get("subscription_windows", []):
+            if isinstance(window, dict) and ("length_hours" in window) != ("pacing_slack_percent" in window):
+                errors.append(f"{name}: window '{window.get('name')}': length_hours and pacing_slack_percent go together")
     elif name == "state/setup.json":
         for block, state in data.get("blocks", {}).items():
             if isinstance(state, dict) and state.get("status") == "accepted" and state.get("hash") is None:
@@ -244,6 +249,9 @@ class Instance:
     @property
     def backlog_path(self) -> Path:
         return self.root / "projects" / "backlog.md"
+
+    def demo_projects(self) -> set[str]:
+        return {p["id"] for line in self.org["lines"] for p in line["projects"] if p.get("demo")}
 
     def line_projects(self) -> dict[str, set[str]]:
         return {line["id"]: {p["id"] for p in line["projects"]} for line in self.org["lines"]}

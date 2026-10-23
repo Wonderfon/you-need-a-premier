@@ -225,14 +225,16 @@ def transition(path: Path, key: tuple[str, str, str], current: str, new: str, de
     return update(path, change)
 
 
-def recover_running(path: Path, max_age: timedelta, now: datetime | None = None) -> list[Task]:
-    """Put `running` rows older than `max_age` back to todo (their worker died); returns the rows it reset."""
+def recover_running(path: Path, max_age: timedelta, now: datetime | None = None,
+                    alive: Callable[[Task], bool] | None = None) -> list[Task]:
+    """Put `running` rows older than `max_age` back to todo (their worker died); returns the rows it reset.
+    A row whose worker is still alive (`alive(task)` true, e.g. it holds the claim lock) is left alone however old."""
     moment = now or datetime.now(timezone.utc)
 
     def change(board: Backlog):
         reset = []
         for task in board.tasks:
-            if task.state == "running" and moment - parse_time(task.detail) > max_age:
+            if task.state == "running" and moment - parse_time(task.detail) > max_age and not (alive and alive(task)):
                 reset.append(Task(task.index, task.section, task.project, "running", task.detail, task.text))
                 board.set_state(task, "todo")
         return reset
