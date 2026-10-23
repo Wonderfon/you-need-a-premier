@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import backlog, config
+from . import backlog, config, intent
 
 BOARD = "projects/backlog.md"
 
@@ -66,4 +66,5 @@ def check_instance(root: str | Path | None) -> tuple[list[str], config.Instance 
                 errors.extend(f"{BOARD} line {number}: {message}" if number else f"{BOARD}: {message}"
                               for number, message in exc.errors)
             errors.extend(weight_problems(instance.org, board))
+            errors.extend(intent.problems(instance, board))
     return errors, instance

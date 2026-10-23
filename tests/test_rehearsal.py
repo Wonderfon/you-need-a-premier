@@ -94,6 +94,7 @@ class KilledProcess(InstanceCase):
                 self.write_board(ROWS)
                 crashed = run_cli("rehearse", self.root, "--rating", "useful", "--crash-after", step)
                 self.assertEqual(crashed.returncode, 75, crashed.stderr)
+                self.assertIn("claimed attempt 1", crashed.stdout)  # what happened before the crash is visible
                 resumed = run_cli("rehearse", self.root, "--rating", "useful")
                 self.assertEqual(resumed.returncode, 0, resumed.stderr)
                 events = [(e["event"], e.get("attempt")) for e in ledger.read(self.root)]

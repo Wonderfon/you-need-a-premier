@@ -17,15 +17,17 @@ STEPS = ("dispatched", "submitted", "reviewed")
 
 
 def rehearse(instance: Instance, rating: str, tasks: int = 1, source: usage.UsageSource | None = None,
-             now: datetime | None = None, after_step: Callable[[str], None] = lambda step: None) -> list[str]:
-    """Run until `tasks` demo rows have an owner rating. `after_step` is called after each durable step (testing hook)."""
+             now: datetime | None = None, after_step: Callable[[str], None] = lambda step: None,
+             emit: Callable[[str], None] | None = None) -> list[str]:
+    """Run until `tasks` demo rows have an owner rating. `after_step` is called after each durable step (testing hook);
+    `emit` receives every output line the moment it is produced."""
     executor, reviewer = FakeExecutor(), FakeReviewer()
     demo = instance.demo_projects()
     if not demo:
         return ["No demo project is configured (a project with \"demo\": true); nothing to rehearse."]
     moment = now or usage.now_utc()
     source = source or usage.FakeUsage.healthy(instance.policy, moment)
-    out: list[str] = []
+    out = _Echo(emit)
 
     def rated() -> set[str]:
         return {e["task"] for e in ledger.read(instance.root, ledger.FEEDBACK)}
@@ -87,6 +89,17 @@ def rehearse(instance: Instance, rating: str, tasks: int = 1, source: usage.Usag
             work_and_submit(key, result.attempt)
     out.append("Model requests: 0. Messages sent: 0.")
     return out
+
+
+class _Echo(list):
+    def __init__(self, emit):
+        super().__init__()
+        self.emit = emit
+
+    def append(self, line):
+        super().append(line)
+        if self.emit:
+            self.emit(line)
 
 
 def _name(key) -> str:

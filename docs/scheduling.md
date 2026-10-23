@@ -47,6 +47,7 @@ These checks live in code and compare identities recorded in the ledger. The boa
 - A worker that is working on a row holds `workflow.claim_lock(...)`. The operating system releases it if the process dies.
 - `backlog.recover_running(path, max_age, alive=workflow.worker_alive(root))` puts a `running` row back to `todo` only when it is older than `max_age` **and** its claim lock is not held. A long task whose worker is alive stays running.
 - `python -m orgcore recover <instance> --max-age-minutes N` does the same from the command line.
+- On Windows the operating system releases a dead process's lock a few milliseconds late (0 to about 20 ms measured), so a recovery pass run right after a kill can still see the worker as alive; the row is then put back on the next pass. Tests that kill a worker wait for the lock to clear (up to 2 seconds) before asserting.
 - The rehearsal resumes a row it dispatched if its process was killed, continuing the same attempt instead of starting another.
 
 ## Offline rehearsal

@@ -2,7 +2,7 @@
 
 A small, text-first core for running an organization of AI agents: configuration with a strict schema, a plain-text task board with safe concurrent writes, and a checker that keeps private details out of the repository. Python 3.11+, standard library only.
 
-Status: v0.1 in progress. This repository contains the configuration layer, the task board, the scheduler with a usage gate, fake workers and an offline rehearsal. Local reports, owner intent and feedback files, and guided setup are added in later blocks.
+Status: v0.1 in progress. This repository contains the configuration layer, the task board, the scheduler with a usage gate, fake workers and an offline rehearsal, owner intent pages, a rating summary and local reports. Guided setup is added in a later block.
 
 ## Run the tests
 
@@ -34,6 +34,7 @@ python -m orgcore rehearse /tmp/demo-instance --rating useful
 | `orgcore/fsio.py` | cross-process lock and atomic write |
 | `orgcore/scheduler.py`, `usage.py` | one-row dispatch, usage observations and the gate |
 | `orgcore/workflow.py`, `fake.py`, `rehearsal.py` | executor/reviewer roles, fake workers, offline rehearsal |
+| `orgcore/intent.py`, `feedback.py`, `report.py` | owner intent pages, rating summary, local reports (`docs/intent-feedback-reports.md`) |
 | `orgcore/check.py` | one-pass validation of an instance |
 | `docs/` | file formats |
 | `examples/` | fictional demo instance |

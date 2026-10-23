@@ -1,4 +1,5 @@
 import json
+import time
 import unittest
 from datetime import datetime, timedelta, timezone
 
@@ -93,6 +94,10 @@ class Recovery(InstanceCase):
             holder.kill()
             holder.wait()
             holder.stdout.close()
+        alive = workflow.worker_alive(inst.root)
+        deadline = time.monotonic() + 2  # Windows releases a dead process's lock a few milliseconds late
+        while alive(backlog.read(inst.backlog_path).tasks[0]) and time.monotonic() < deadline:
+            time.sleep(0.01)
         reset = backlog.recover_running(inst.backlog_path, timedelta(hours=1), NOW, alive=workflow.worker_alive(inst.root))
         self.assertEqual([t.text for t in reset], ["slow"])
         self.assertEqual(backlog.read(inst.backlog_path).tasks[0].state, "todo")
