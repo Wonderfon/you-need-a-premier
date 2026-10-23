@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "live_enabled": false,
+  "live_consent": null,
+  "max_concurrency": 1,
+  "spending": {"currency": "USD", "period": "month", "cap": 0, "paid_apis_allowed": false},
+  "subscription_windows": [
+    {"name": "five_hour", "reserve_percent": 30, "max_share_percent": 50, "max_observation_age_minutes": 15},
+    {"name": "seven_day", "reserve_percent": 30, "max_share_percent": 50, "max_observation_age_minutes": 360}
+  ],
+  "hard_gates": {"external_contact": true, "deploy": true, "trading": true, "purchases": true},
+  "rules": {"text": "Never contact anyone, buy anything, trade, deploy, or change original data.", "version": 1}
+}

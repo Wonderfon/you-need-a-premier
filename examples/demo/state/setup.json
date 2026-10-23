@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "revision": 0,
+  "phase": "collecting",
+  "pending_question": "identity",
+  "demo_run_id": null,
+  "blocks": {
+    "identity": {"status": "pending", "hash": null},
+    "goal": {"status": "pending", "hash": null},
+    "lines": {"status": "pending", "hash": null},
+    "projects": {"status": "pending", "hash": null},
+    "weights": {"status": "pending", "hash": null},
+    "time": {"status": "pending", "hash": null},
+    "reporting": {"status": "pending", "hash": null},
+    "spending": {"status": "pending", "hash": null},
+    "subscription": {"status": "pending", "hash": null},
+    "rules": {"status": "pending", "hash": null},
+    "install": {"status": "pending", "hash": null},
+    "confirm": {"status": "pending", "hash": null}
+  }
+}
