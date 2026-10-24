@@ -23,6 +23,7 @@ from .fsio import atomic_write, file_lock
 ENTRY_RE = re.compile(
     r'^- \[(?P<id>I-\d{3,})\] (?P<date>\d{4}-\d\d-\d\d) \| source: (?P<source>[^|]+?) \| "(?P<quote>.+?)"'
     r'(?: \| superseded-by: (?P<by>I-\d{3,}))?$')
+LOOSE_ID_RE = re.compile(r"^- \[(?P<id>I-\d{3,})\]")
 REF_RE = re.compile(r"\bintent:\s*(I-\d{3,}(?:\s*,\s*I-\d{3,})*)")
 
 
@@ -49,7 +50,7 @@ def path_of(root: Path, project: str) -> Path:
 
 def parse(text: str, name: str = "intent file") -> list[Intent]:
     """Every problem is reported together with its line number; a bad file is never half-read."""
-    entries, errors, seen = [], [], set()
+    entries, errors, seen, broken = [], [], set(), set()
     for number, raw in enumerate(text.split("\n"), 1):
         line = raw.rstrip("\r")
         if not line.startswith("- ["):
@@ -58,18 +59,22 @@ def parse(text: str, name: str = "intent file") -> list[Intent]:
         if not match:
             errors.append(f'{name} line {number}: malformed entry; expected '
                           f'- [I-001] YYYY-MM-DD | source: <id> | "<owner words>"')
+            loose = LOOSE_ID_RE.match(line)
+            if loose:
+                broken.add(loose["id"])
             continue
         try:
             date.fromisoformat(match["date"])
         except ValueError:
             errors.append(f"{name} line {number}: '{match['date']}' is not a real date")
+            broken.add(match["id"])  # the entry exists; its own error is listed, so nothing may call it missing
             continue
         if match["id"] in seen:
             errors.append(f"{name} line {number}: duplicate id {match['id']}")
         seen.add(match["id"])
         entries.append(Intent(match["id"], match["date"], match["source"].strip(), match["quote"], match["by"]))
     for entry in entries:
-        if entry.superseded_by and entry.superseded_by not in seen:
+        if entry.superseded_by and entry.superseded_by not in seen | broken:
             errors.append(f"{name}: {entry.id} is superseded by {entry.superseded_by}, which does not exist")
     if errors:
         raise IntentError(errors)
@@ -135,8 +140,9 @@ def problems(instance: Instance, board: backlog.Backlog) -> list[str]:
         where = f"projects/backlog.md line {task.index + 1}"
         if task.project not in loaded:
             out.append(f"{where}: cites {', '.join(cited)} but projects/intent/{task.project}.md does not exist")
-        elif entries is None:
-            continue  # the file's own errors are already listed
+        elif entries is None:  # the file's own errors are listed above; its entries cannot be trusted yet
+            out.append(f"{where}: cites {', '.join(cited)}; projects/intent/{task.project}.md has errors, "
+                       f"fix the file and run check again to verify the citation")
         else:
             known = {e.id: e for e in entries}
             for ident in cited:

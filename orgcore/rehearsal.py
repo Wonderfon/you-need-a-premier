@@ -16,11 +16,12 @@ from .fake import FakeExecutor, FakeReviewer
 STEPS = ("dispatched", "submitted", "reviewed")
 
 
-def rehearse(instance: Instance, rating: str, tasks: int = 1, source: usage.UsageSource | None = None,
+def rehearse(instance: Instance, rating: str | None, tasks: int = 1, source: usage.UsageSource | None = None,
              now: datetime | None = None, after_step: Callable[[str], None] = lambda step: None,
              emit: Callable[[str], None] | None = None) -> list[str]:
-    """Run until `tasks` demo rows have an owner rating. `after_step` is called after each durable step (testing hook);
-    `emit` receives every output line the moment it is produced."""
+    """Run until `tasks` demo rows are done. With a `rating` each finished row is rated on the spot; with `rating=None`
+    the run stops once the rows have passed review, so the owner can read the result first and then call `rate`.
+    `after_step` is called after each durable step (testing hook); `emit` receives every output line as it is produced."""
     executor, reviewer = FakeExecutor(), FakeReviewer()
     demo = instance.demo_projects()
     if not demo:
@@ -32,6 +33,12 @@ def rehearse(instance: Instance, rating: str, tasks: int = 1, source: usage.Usag
     def rated() -> set[str]:
         return {e["task"] for e in ledger.read(instance.root, ledger.FEEDBACK)}
 
+    def finished() -> set[str]:
+        board = backlog.read(instance.backlog_path)
+        events = ledger.read(instance.root)
+        return {ledger.task_id(t.key) for t in board.tasks if t.project in demo and t.state == "done"
+                and any(e["verdict"] == "pass" for e in ledger.for_task(events, t.key, "reviewed"))}
+
     def work_and_submit(key, attempt):
         evidence = executor.work(instance.root, key, attempt)
         out.append(f"{_name(key)}  running -> review   {executor.actor} submitted {evidence}")
@@ -42,11 +49,12 @@ def rehearse(instance: Instance, rating: str, tasks: int = 1, source: usage.Usag
         board = backlog.read(instance.backlog_path)
         mine = [t for t in board.tasks if t.project in demo]
         # 1. rows that passed review but have no owner rating yet (a run was killed right after the verdict)
-        for task in mine:
-            passed = [e for e in ledger.for_task(ledger.read(instance.root), task.key, "reviewed") if e["verdict"] == "pass"]
-            if task.state == "done" and passed and ledger.task_id(task.key) not in rated() and len(rated()) < tasks:
-                _rate(instance, task, rating, moment, out)
-        if len(rated()) >= tasks:
+        if rating is not None:
+            for task in mine:
+                passed = [e for e in ledger.for_task(ledger.read(instance.root), task.key, "reviewed") if e["verdict"] == "pass"]
+                if task.state == "done" and passed and ledger.task_id(task.key) not in rated() and len(rated()) < tasks:
+                    _rate(instance, task, rating, moment, out)
+        if len(rated() | (finished() if rating is None else set())) >= tasks:
             break
         # 2. a row this executor holds but nobody is working on (its process died): continue it, same attempt
         resumed = False
@@ -88,6 +96,28 @@ def rehearse(instance: Instance, rating: str, tasks: int = 1, source: usage.Usag
         with workflow.claim_lock(instance.root, key):
             work_and_submit(key, result.attempt)
     out.append("Model requests: 0. Messages sent: 0.")
+    return out
+
+
+def awaiting(instance: Instance) -> list:
+    """Demo rows the rehearsal took to done (reviewed pass) that have no owner rating yet."""
+    given = {e["task"] for e in ledger.read(instance.root, ledger.FEEDBACK)}
+    events = ledger.read(instance.root)
+    return [t for t in backlog.read(instance.backlog_path).tasks
+            if t.project in instance.demo_projects() and t.state == "done" and ledger.task_id(t.key) not in given
+            and any(e["verdict"] == "pass" for e in ledger.for_task(events, t.key, "reviewed"))]
+
+
+def rate(instance: Instance, rating: str, tasks: int = 1, now: datetime | None = None,
+         emit: Callable[[str], None] | None = None) -> list[str]:
+    """Record the owner's verdict on up to `tasks` finished demo rows that have no rating yet. Re-running adds nothing."""
+    out = _Echo(emit)
+    moment = now or usage.now_utc()
+    rated = len({e["task"] for e in ledger.read(instance.root, ledger.FEEDBACK)})
+    for task in awaiting(instance)[:max(tasks - rated, 0)]:
+        _rate(instance, task, rating, moment, out)
+    if not out:
+        out.append("Nothing to rate: no finished demo row is waiting for a verdict.")
     return out
 
 

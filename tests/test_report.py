@@ -52,6 +52,10 @@ TZ = NewYorkLike()
 
 
 class ReportCase(InstanceCase):
+    def setUp(self):
+        super().setUp()
+        self.set_reporting(timezone="America/New_York")  # only the label: these tests pass their own fixed-offset tzinfo
+
     def set_reporting(self, **changes):
         path = self.root / "reporting.json"
         data = json.loads(path.read_text(encoding="utf-8"))

@@ -90,8 +90,24 @@ class IntentReferences(IntentCase):
     def test_a_damaged_intent_file_is_reported_not_swallowed(self):
         self.write_intent("demo-notes", GOOD + "- [I-004] not an entry\n")
         errors = self.errors("- [todo] demo-notes: x (intent: I-001)")
-        self.assertEqual(len(errors), 1)
+        self.assertEqual(len(errors), 2)
         self.assertIn("projects/intent/demo-notes.md line 6: malformed entry", errors[0])
+        self.assertIn("fix the file and run check again to verify the citation", errors[1])
+        self.assertIn("backlog.md line 5", errors[1])
+
+    def test_a_bad_entry_is_not_reported_as_missing_when_another_entry_is_superseded_by_it(self):
+        text = GOOD.replace("2026-01-12", "2026-02-30")  # I-003 exists but its date is not real
+        with self.assertRaises(intent.IntentError) as raised:
+            intent.parse(text, "f.md")
+        self.assertEqual(raised.exception.errors, ["f.md line 5: '2026-02-30' is not a real date"])
+        malformed = GOOD.replace('"Add a reading list, five items at most."', "oops")
+        with self.assertRaises(intent.IntentError) as raised:
+            intent.parse(malformed, "f.md")
+        self.assertEqual(len(raised.exception.errors), 1)
+        self.assertIn("malformed entry", raised.exception.errors[0])
+        with self.assertRaises(intent.IntentError) as raised:  # a pointer to an id that is nowhere is still reported
+            intent.parse(GOOD.replace("superseded-by: I-003", "superseded-by: I-009"), "f.md")
+        self.assertIn("I-002 is superseded by I-009, which does not exist", raised.exception.errors[0])
 
     def test_check_command_fails_on_a_bad_citation(self):
         from .support import run_cli

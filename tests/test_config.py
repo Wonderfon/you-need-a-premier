@@ -30,7 +30,10 @@ class DemoInstance(unittest.TestCase):
         self.assertEqual((ROOT / "examples" / "org.example.json").read_bytes(), (DEMO / "org.json").read_bytes())
 
     def test_check_command_passes_on_demo(self):
-        self.assertEqual(cli.main(["check", str(DEMO)]), 0)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):  # keep the command's own line out of the test runner's output
+            self.assertEqual(cli.main(["check", str(DEMO)]), 0)
+        self.assertTrue(out.getvalue().startswith("OK: 2 line(s)"))
 
 
 class Validation(unittest.TestCase):

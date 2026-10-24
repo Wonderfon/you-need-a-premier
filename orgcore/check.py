@@ -36,6 +36,17 @@ def duplicate_tasks(board: backlog.Backlog) -> list[str]:
     return problems
 
 
+def warnings(instance: config.Instance) -> list[str]:
+    """Problems that do not make the instance invalid but will break a command later."""
+    from . import report
+    try:
+        report.zone(instance.reporting["timezone"])
+    except report.ReportError:
+        return [f"reporting.json: time zone '{instance.reporting['timezone']}' cannot be resolved on this system, so `report` "
+                f"will fail; set \"timezone\" to \"UTC\" or install the 'tzdata' package for this Python"]
+    return []
+
+
 def check_instance(root: str | Path | None) -> tuple[list[str], config.Instance | None]:
     errors: list[str] = []
     instance = None

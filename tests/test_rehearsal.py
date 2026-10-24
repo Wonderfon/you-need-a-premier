@@ -46,6 +46,26 @@ class Rehearsal(InstanceCase):
         self.check_one_clean_circle()
         self.assertEqual(out, ["Model requests: 0. Messages sent: 0."])
 
+    def test_without_a_rating_the_run_stops_at_the_result_and_rate_records_it_once(self):
+        out = rehearsal.rehearse(self.instance(), None, now=NOW)
+        self.assertIn("review -> done", "\n".join(out))
+        self.assertNotIn("owner feedback saved", "\n".join(out))
+        self.assertEqual(ledger.read(self.root, ledger.FEEDBACK), [])
+        self.assertEqual(rehearsal.rehearse(self.instance(), None, now=NOW), ["Model requests: 0. Messages sent: 0."])
+        self.assertEqual(rehearsal.rate(self.instance(), "useful", now=NOW), ["DEMO-" + ledger.task_id(
+            backlog.read(self.root / "projects" / "backlog.md").tasks[0].key) + "  owner feedback saved: useful"])
+        self.assertEqual(rehearsal.rate(self.instance(), "rework", now=NOW)[0].split(":")[0], "Nothing to rate")
+        self.check_one_clean_circle()
+
+    def test_the_command_line_shows_the_result_then_tells_how_to_rate(self):
+        shown = run_cli("rehearse", self.root)
+        self.assertEqual(shown.returncode, 0, shown.stderr)
+        self.assertIn("rate " + str(self.root), shown.stdout)
+        self.assertEqual(ledger.read(self.root, ledger.FEEDBACK), [])
+        rated = run_cli("rate", self.root, "not-useful")
+        self.assertIn("owner feedback saved: not useful", rated.stdout)
+        self.assertEqual([e["rating"] for e in ledger.read(self.root, ledger.FEEDBACK)], ["not_useful"])
+
     def test_tasks_option_takes_several_rows_through(self):
         rehearsal.rehearse(self.instance(), "rework", tasks=2, now=NOW)
         states = [t.state for t in backlog.read(self.root / "projects" / "backlog.md").tasks]
