@@ -6,6 +6,8 @@ rate       record the owner's verdict on the finished demo rows of a rehearsal
 feedback   summary of the owner's ratings: latest per row, finished rows not yet rated, rows rated "rework"
 report     write the local report that is due now (reports/<date>-<HHMM>.md), at most one, never twice for a slot
 recover    put abandoned `running` rows back to todo (rows whose worker is still alive are left alone)
+usage      show the usage readings in state/usage.json and whether the dispatch gate is open
+usage-capture  status-line hook for the official CLI: reads its status JSON on stdin and records the usage windows
 setup      guided-setup writer: setup <instance-dir> start|status|show|save|accept|compose (see docs/guided-setup.md)
 """
 from __future__ import annotations
@@ -17,7 +19,7 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
-from . import backlog, check, config, feedback, rehearsal, report, workflow
+from . import backlog, check, config, feedback, rehearsal, report, statusline, usage, workflow
 from . import setup as guided
 
 RATINGS = ["useful", "not-useful", "rework"]
@@ -64,7 +66,7 @@ def _setup_command(args) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="orgcore")
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("check", "rehearse", "rate", "recover", "feedback", "report"):
+    for name in ("check", "rehearse", "rate", "recover", "feedback", "report", "usage"):
         command = sub.add_parser(name)
         command.add_argument("instance", nargs="?", help=f"instance directory (default: ${config.INSTANCE_ENV})")
     sub.choices["rehearse"].add_argument("--rating", choices=RATINGS,
@@ -76,6 +78,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.choices["rehearse"].add_argument("--crash-after", choices=rehearsal.STEPS,
                                          help="testing aid: kill this process abruptly after the first such step")
     sub.choices["recover"].add_argument("--max-age-minutes", type=int, required=True)
+    sub.add_parser("usage-capture").add_argument("instance", help="instance directory")
     setup = sub.add_parser("setup")
     setup.add_argument("instance", help="instance directory")
     setup.add_argument("action", choices=["start", "status", "show", "save", "accept", "compose"])
@@ -86,6 +89,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == "setup":
         return _setup_command(args)
+    if args.command == "usage-capture":  # runs as the CLI's status line: quick, quiet, never fails the session
+        try:
+            print(statusline.capture(config.resolve_instance(args.instance), sys.stdin.read(), usage.now_utc()))
+        except Exception as exc:
+            print(f"usage capture failed ({type(exc).__name__})")
+        return 0
 
     errors, instance = check.check_instance(args.instance)
     if errors:
@@ -108,6 +117,18 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Read the result above, then record your verdict: python -m orgcore rate {instance.root} useful|not-useful|rework")
     elif args.command == "rate":
         rehearsal.rate(instance, args.rating.replace("-", "_"), args.tasks, emit=lambda line: print(line, flush=True))
+    elif args.command == "usage":
+        now = usage.now_utc()
+        try:
+            readings = usage.JsonFileUsage(usage.usage_path(instance.root)).observe()
+        except usage.UsageUnavailable as exc:
+            print(f"No usage readings: {exc}\nDispatch gate: closed (unknown is never treated as zero)")
+            return 0
+        for r in readings:
+            print(f"{r.window}: {r.used_percent:g}% used, observed {backlog.format_time(r.observed_at)} by {r.source}"
+                  f"{' (synthetic)' if r.synthetic else ''}, resets {backlog.format_time(r.resets_at)}")
+        gate = usage.evaluate(instance.policy, readings, now)
+        print("Dispatch gate: open" if gate.allowed else "Dispatch gate: closed\n" + "\n".join(f"  - {r}" for r in gate.reasons))
     elif args.command == "feedback":
         print("\n".join(feedback.describe(feedback.summarize(instance))))
     elif args.command == "report":

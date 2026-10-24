@@ -34,6 +34,27 @@ class Observation:
             raise UsageUnavailable(f"window '{self.window}': reading has no source")
 
 
+_ALIASES = {"fivehour": "five_hour", "5hour": "five_hour", "5h": "five_hour", "sevenday": "seven_day",
+            "7day": "seven_day", "7d": "seven_day", "week": "seven_day", "weekly": "seven_day"}
+
+
+def canonical(name: str) -> str:
+    """The official 5-hour and 7-day windows may be named freely in policy.json ("5-hour", "weekly", ...); readings use
+    `five_hour` and `seven_day`. Any other name only matches itself."""
+    squashed = "".join(ch for ch in name.lower() if ch.isalnum())
+    return _ALIASES.get(squashed, name)
+
+
+def usage_path(root: Path) -> Path:
+    return root / "state" / "usage.json"
+
+
+def tracking_window(policy: dict) -> dict:
+    """The window a run's consumption is measured on: the longest one that declares its length, else the first."""
+    windows = policy["subscription_windows"]
+    return max(windows, key=lambda w: w.get("length_hours", 0))
+
+
 class UsageSource(Protocol):
     def observe(self) -> list[Observation]: ...
 
@@ -85,7 +106,7 @@ def evaluate(policy: dict, readings: list[Observation], now: datetime) -> Gate:
     reasons = []
     for window in policy["subscription_windows"]:
         name = window["name"]
-        mine = [r for r in readings if r.window == name]
+        mine = [r for r in readings if r.window == name or canonical(r.window) == canonical(name)]
         if not mine:
             reasons.append(f"{name}: unknown, no observation (unknown is never treated as zero)")
             continue

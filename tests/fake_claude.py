@@ -23,6 +23,13 @@ def main(argv):
     if argv[:2] == ["auth", "status"]:
         print(os.environ.get("FAKE_CLAUDE_AUTH") or json.dumps(DEFAULT_AUTH))
         return 0
+    if argv[:1] == ["-p"]:  # a worker session: log the launch, write the named file, answer like `--output-format json`
+        with open(os.environ["FAKE_CLAUDE_LOG"], "a", encoding="utf-8") as log:
+            log.write(json.dumps({"argv": argv, "cwd": os.getcwd(), "env_names": sorted(os.environ)}) + "\n")
+        if os.environ.get("FAKE_CLAUDE_WRITE"):
+            open(os.environ["FAKE_CLAUDE_WRITE"], "w", encoding="utf-8").write("Summary: done\nSources: none\n")
+        print(json.dumps({"result": os.environ.get("FAKE_CLAUDE_RESULT", "")}))
+        return int(os.environ.get("FAKE_CLAUDE_EXIT", "0"))
     prompt_file = argv[argv.index("--append-system-prompt-file") + 1]
     root = argv[argv.index("--add-dir") + 1]
     text = open(prompt_file, encoding="utf-8").read()

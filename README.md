@@ -47,6 +47,7 @@ The demo uses the time zone `UTC`, which works everywhere. If you set a named zo
 | `orgcore/scheduler.py`, `usage.py` | one-row dispatch, usage observations and the gate |
 | `orgcore/workflow.py`, `fake.py`, `rehearsal.py` | executor/reviewer roles, fake workers, offline rehearsal |
 | `orgcore/intent.py`, `feedback.py`, `report.py` | owner intent pages, rating summary, local reports (`docs/intent-feedback-reports.md`) |
+| `orgcore/adapter.py`, `statusline.py`, `prompts/executor.md`, `prompts/reviewer.md` | real CLI workers with their guards, usage readings from the CLI's status data, role templates (`docs/real-workers.md`) |
 | `orgcore/check.py` | one-pass validation of an instance |
 | `bootstrap.py`, `prompts/`, `orgcore/setup.py`, `doctor.py` | guided setup: entry point, coordinator prompt, answer writer, machine checks (`docs/guided-setup.md`) |
 | `docs/` | file formats |

@@ -70,6 +70,9 @@ class Launch(BootstrapCase):
         self.assertEqual(argv[-2], "--allowedTools")  # last, so it cannot swallow a trailing argument
         self.assertIn("-m orgcore setup:*", argv[-1])
         self.assertNotIn("--bare", argv)
+        status_line = json.loads(argv[argv.index("--settings") + 1])["statusLine"]
+        self.assertEqual(status_line["type"], "command")
+        self.assertIn(f'-m orgcore usage-capture "{self.inst.resolve()}"', status_line["command"])
         self.assertFalse(launch["prompt_has_placeholder"])
         self.assertTrue(launch["prompt_names_instance"])
         self.assertEqual(Path(launch["cwd"]).resolve(), self.inst.resolve())

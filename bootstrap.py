@@ -9,6 +9,7 @@ credential, never calls a model itself, and never changes anything outside the i
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -47,8 +48,10 @@ def render_prompt(root: Path) -> Path:
 def launch_command(claude: list[str], prompt: Path, root: Path) -> list[str]:
     allowed = f'Bash("{sys.executable}" -m orgcore setup:*)'
     # the first message comes before the options: --allowedTools takes a list and would swallow a trailing argument
+    # the status line is how an interactive session hands its usage windows to state/usage.json
+    status_line = {"statusLine": {"type": "command", "command": f'"{sys.executable}" -m orgcore usage-capture "{root}"'}}
     return [*claude, FIRST_MESSAGE, "--append-system-prompt-file", str(prompt), "--add-dir", str(root),
-            "--allowedTools", allowed]
+            "--settings", json.dumps(status_line), "--allowedTools", allowed]
 
 
 def local_checks(out, claude: list[str] | None, run) -> None:

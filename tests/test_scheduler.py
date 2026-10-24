@@ -48,9 +48,9 @@ class Dispatch(InstanceCase):
         self.assertEqual(scheduler.dispatch(self.instance(), self.healthy(), "e", NOW).task.text, "old")
 
     def test_spend_window_forgets_old_dispatches(self):
-        events = [{"event": "dispatched", "line": "research", "ts": "2026-01-04T12:00:00Z"},
-                  {"event": "dispatched", "line": "research", "ts": "2025-12-01T12:00:00Z"}]
-        self.assertEqual(scheduler.recent_spend(events, NOW), {"research": 1})
+        events = [{"event": "dispatched", "line": "research", "ts": "2026-01-04T12:00:00Z", "task": "a", "attempt": 1},
+                  {"event": "dispatched", "line": "research", "ts": "2025-12-01T12:00:00Z", "task": "b", "attempt": 1}]
+        self.assertEqual(scheduler.recent_spend(events, NOW), {"research": 1})  # unmeasured: 1 point each
 
     def test_no_work(self):
         self.write_board(board(("research", 60, ["- [done] demo-notes: x"]), ("build", 40, [])))
