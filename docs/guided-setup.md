@@ -10,6 +10,8 @@
 4. **Subscription check.** The script runs `claude auth status --json` and keeps two facts: signed in, and which method. It passes only for a subscription login (`claude.ai` or `oauth_token`) and only if `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, the Bedrock/Vertex/Foundry switches and an `apiKeyHelper` (user or project settings) are all absent. It does not use the plan name. Nothing else from the status output (account, organization) is stored or printed. On failure it says what to fix; it does not sign you in.
 5. **Launch.** The CLI starts in the instance directory with `--append-system-prompt-file` (the English coordinator prompt, filled in with the instance path), `--add-dir`, and permission only for the setup writer command. The coordinator asks one question at a time.
 
+The launch pre-approves one thing: the `Bash` tool running `python -m orgcore setup ...`. On Windows the CLI may run commands through its `PowerShell` tool instead, and no narrower allow rule for that tool was found that works (tried five forms), so there the CLI can ask you to approve each setup command and each answer file it writes. Approve only commands that start with `python -m orgcore setup`; answers it saves as `answer-<block>.json` in the instance folder can be deleted afterwards. The saved copies live in `state/answers/`.
+
 ## Where answers go
 
 ```
