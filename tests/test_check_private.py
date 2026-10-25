@@ -61,6 +61,20 @@ class CheckPrivate(unittest.TestCase):
         self.assertNotIn("zzqq", out.lower())
         self.assertNotIn("1234", out)
 
+    def test_credential_shapes_are_found_without_a_ban_list_entry_and_never_printed(self):
+        fake = "sk-ant-" + "a1B2c3D4e5" * 3  # built at run time so this file holds no credential-shaped text
+        (self.repo / "a.txt").write_text(f"fine\nkey: {fake}\n", encoding="utf-8")
+        (self.repo / "b.txt").write_text('password = "' + "x9" * 10 + '"\n', encoding="utf-8")
+        self.commit()
+        (self.repo / "a.txt").write_text("clean now\n", encoding="utf-8")
+        self.commit()
+        code, out = run_check(self.banned, self.repo)
+        self.assertEqual(code, 1)
+        self.assertIn("b.txt:1", out)
+        self.assertRegex(out, r"history \w+: a\.txt:\d+")
+        self.assertNotIn("a1B2c3", out)
+        self.assertNotIn("x9x9", out)
+
     def test_history_hit_survives_deletion_from_the_tree(self):
         (self.repo / "a.txt").write_text("zzqq-secret\n", encoding="utf-8")
         self.commit()

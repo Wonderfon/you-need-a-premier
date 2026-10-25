@@ -22,7 +22,7 @@
     "name": "default"
   },
   "cost": {
-    "total_cost_usd": 0.0025059500000000007,
+    "total_cost_usd": 0.0025,
     "total_duration_ms": 160871,
     "total_api_duration_ms": 1785,
     "total_lines_added": 0,

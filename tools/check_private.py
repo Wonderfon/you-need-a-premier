@@ -2,6 +2,7 @@
 
     python tools/check_private.py <banned.txt> [repo-dir]
 
+Credential shapes (API keys, tokens, private keys, key=value secrets) are always checked too, in every reachable commit.
 Ban list: one term per line; '#' starts a comment; a plain term is a case-insensitive substring;
 're:<pattern>' is a regular expression. Hits are reported as location only (file and line, or commit and file),
 never the matched text, so the report itself is safe to paste. Exit code: 0 clean, 1 hits, 2 usage or setup error.
@@ -17,6 +18,16 @@ import sys
 from pathlib import Path
 
 SKIP_DIRS = {".git", "__pycache__", ".venv"}
+
+# Shapes of common credentials, always checked next to the ban list (reported by location only, like every hit).
+SECRET_PATTERNS = [re.compile(p) for p in (
+    r"sk-ant-[A-Za-z0-9_-]{20,}", r"sk-[A-Za-z0-9]{32,}", r"gh[pousr]_[A-Za-z0-9]{30,}", r"github_pat_[A-Za-z0-9_]{30,}",
+    r"AKIA[0-9A-Z]{16}", r"xox[baprs]-[A-Za-z0-9-]{10,}", r"AIza[0-9A-Za-z_-]{35}",
+    r"-----BEGIN [A-Z ]*PRIVATE KEY-----", r"eyJ[A-Za-z0-9_-]{15,}\.eyJ[A-Za-z0-9_-]{10,}",
+    r"[MN][A-Za-z0-9]{23,25}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{27,}",
+    # key = "value" assignments; a value that says it is a placeholder (test, fake, example, ...) is not a credential
+    r"(?i)(api[_-]?key|secret|token|passwd|password)[\"']?\s*[:=]\s*[\"'](?![^\"'\s]*(?:test|fake|example|dummy|placeholder))[^\"'\s]{16,}[\"']",
+)]
 
 
 def load_terms(path: Path) -> list[re.Pattern]:
@@ -64,7 +75,7 @@ def scan_history(git: str, root: Path, terms: list[re.Pattern]) -> list[str]:
     for ref in refs.splitlines():
         if hit(terms, ref):
             found.append("ref name: a branch or tag name matches (see git for-each-ref)")
-    log = run_git(git, root, "log", "--all", "-p", "--format=@@COMMIT %H%n%an%n%ae%n%cn%n%ce%n%B@@BODY")
+    log = run_git(git, root, "log", "--all", "--reflog", "-p", "--format=@@COMMIT %H%n%an%n%ae%n%cn%n%ce%n%B@@BODY")
     commit, where, number, in_meta = "", "", 0, False
     for line in log.splitlines():
         if line.startswith("@@COMMIT "):
@@ -91,7 +102,7 @@ def main(argv: list[str]) -> int:
     banned = Path(argv[1])
     root = Path(argv[2] if len(argv) == 3 else Path(__file__).resolve().parent.parent).resolve()
     try:
-        terms = load_terms(banned)
+        terms = load_terms(banned) + SECRET_PATTERNS
     except (OSError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
