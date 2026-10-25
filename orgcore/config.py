@@ -109,7 +109,8 @@ SCHEMAS = {
     "state/setup.json": _obj({
         "schema_version": VERSION,
         "revision": {"t": "int", "ge": 0},
-        "phase": {"t": "enum", "values": ["collecting", "validated", "demo_running", "demo_ready"]},
+        "phase": {"t": "enum", "values": ["collecting", "validated", "demo_running", "demo_ready", "live_waiting_for_usage",
+                                                       "live_ready"]},
         "pending_question": {"t": "null_or", "spec": {"t": "enum", "values": list(SETUP_BLOCKS)}},
         "demo_run_id": {"t": "null_or", "spec": _str(min=1)},
         "blocks": _obj({name: _obj({

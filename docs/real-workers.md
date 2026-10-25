@@ -34,3 +34,13 @@ Common to both: `-p` with `--output-format json`, `--permission-mode dontAsk` (a
 The executor's evidence must be an existing file inside its working directory, and the reviewer's reply must end in a verdict line; otherwise the session counts as failed, not as a pass.
 
 After a run, `scheduler.settle` records what it consumed (see `docs/scheduling.md`).
+
+## Turning it on and running one unit (`orgcore/live.py`)
+
+`enable-live` shows the project, its folder, the one task and your reserve lines; only with `--yes` (or typing `yes` at the setup question) does it write `live_enabled: true` and a `live_consent` that names that project and that task text. The consent is only written for a non-demo project that has that task waiting, and only after the offline rehearsal was rated. The scheduler is given the task text as a filter, so no other row of the project can be dispatched under it.
+
+The readiness check adds one test to the session guard: the CLI's own `--help` must list every option the workers use (`--append-system-prompt-file`, `--add-dir`, `--allowedTools`, `--disallowedTools`, `--permission-mode dontAsk`, `--session-id`, `--output-format`, `--settings`). The CLI documents that `--help` does not list every flag, and the installed one does not list `--append-system-prompt-file`; that option is judged by its listed sibling `--append-system-prompt`. A missing option is reported as a reason; the CLI is not started. This is a coarse guard: a session that still fails on an option counts as failed, never as a pass.
+
+Setup phases after the demo: `demo_ready` (default), `live_waiting_for_usage` (consent written, something still missing), `live_ready` (all checks pass). The phase only follows the checks; it never withdraws the demo result, and running the offline rehearsal again does not move it back.
+
+`python -m orgcore run <instance>` runs the guard, then the executor session, hands the row to review, runs the reviewer session (a different identity), applies the verdict, and settles the usage the unit consumed. A failed or timed-out session leaves the row in `running`; put it back with `python -m orgcore recover <instance> --max-age-minutes 0`. If only the reviewer step failed, the row stays in `review` and the next `run` goes straight to the reviewer.

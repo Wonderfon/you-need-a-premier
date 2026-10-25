@@ -23,7 +23,7 @@ from .fsio import atomic_write, file_lock
 
 AUTH_METHODS = ("claude.ai", "oauth_token")
 DELIVERY = ("local", "discord", "email")
-PHASES = ("collecting", "validated", "demo_running", "demo_ready")
+PHASES = ("collecting", "validated", "demo_running", "demo_ready", "live_waiting_for_usage", "live_ready")
 
 
 class SetupError(ValueError):
@@ -392,7 +392,10 @@ def compose(root: Path) -> list[str]:
     for name, data in (("org.json", org), ("policy.json", policy), ("reporting.json", reporting)):
         path = root / name
         if path.exists():
-            if json.loads(path.read_text(encoding="utf-8")) != data:
+            existing = json.loads(path.read_text(encoding="utf-8"))
+            if name == "policy.json" and isinstance(existing, dict):  # the consent is written later, by enable-live
+                existing = {**existing, "live_enabled": data["live_enabled"], "live_consent": data["live_consent"]}
+            if existing != data:
                 raise SetupError([f"{name} already exists and differs from the saved answers; it is not replaced. "
                                   f"Move it aside or compare it with state/answers/ first."])
             continue

@@ -40,6 +40,8 @@ python -m orgcore setup <instance> start|status|show [block]|save <block> (--jso
 
 Menu option 2 copies the demo into `<instance>/rehearsal`, takes one pretend row through dispatch, review, rework and done with fake workers (no model, nothing sent), prints the finished work, and only then asks whether it was useful. If a setup exists in the instance, its phase moves to `demo_running` and then `demo_ready` once you have rated.
 
+After the rating, a setup that has been composed (it has an `org.json`) asks: "Keep using the offline demo, or enable real Claude workers?" `1` keeps the demo and changes nothing. `2` lists the real projects, takes a waiting task (or a new task line), shows what would be handed to the model and writes the consent only after you type `yes`; then the phase becomes `live_ready`, or `live_waiting_for_usage` with the reasons if a check fails. See "Enable real workers" in the README and `docs/real-workers.md`.
+
 ## Not in this version
 
-The coordinator does not yet run real work: there is no real CLI adapter for executors and reviewers, no real usage readings, and reports stay local files. Credentials are never part of setup; if you paste one into the chat, remove it.
+Real work runs one unit at a time on your command (`python -m orgcore run`); there is no unattended loop yet, and reports stay local files. Credentials are never part of setup; if you paste one into the chat, remove it.

@@ -97,6 +97,26 @@ def subscription(claude_cmd: list[str], environ=None, home: Path | None = None, 
     return Auth(not problems, method if not problems else None, problems)
 
 
+REQUIRED_FLAGS = ("--append-system-prompt-file", "--add-dir", "--allowedTools", "--disallowedTools", "--permission-mode",
+                  "--session-id", "--output-format", "--settings", "dontAsk")
+
+
+# The CLI documents that `--help` does not list every flag; a flag it hides is judged by the listed option of the same family.
+HELP_PROXY = {"--append-system-prompt-file": "--append-system-prompt"}
+
+
+def cli_gaps(claude_cmd: list[str], run=subprocess.run) -> list[str]:
+    """Launch options the workers rely on that this CLI's own `--help` does not list. Reads help text only."""
+    try:
+        done = run([*claude_cmd, "--help"], capture_output=True, text=True, timeout=STATUS_TIMEOUT_SECONDS)
+    except (OSError, subprocess.TimeoutExpired):
+        return ["could not read the CLI help (run `claude --help`)"]
+    if done.returncode != 0 or not done.stdout.strip():
+        return ["could not read the CLI help (run `claude --help`)"]
+    return [f"this CLI version does not list {HELP_PROXY.get(flag, flag)}; update Claude Code" for flag in REQUIRED_FLAGS
+            if HELP_PROXY.get(flag, flag) not in done.stdout]
+
+
 def version(claude_cmd: list[str], run=subprocess.run) -> str | None:
     try:
         done = run([*claude_cmd, "--version"], capture_output=True, text=True, timeout=STATUS_TIMEOUT_SECONDS)

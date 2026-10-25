@@ -8,6 +8,9 @@ report     write the local report that is due now (reports/<date>-<HHMM>.md), at
 recover    put abandoned `running` rows back to todo (rows whose worker is still alive are left alone)
 usage      show the usage readings in state/usage.json and whether the dispatch gate is open
 usage-capture  status-line hook for the official CLI: reads its status JSON on stdin and records the usage windows
+enable-live  show what real workers would get, then (with --yes) write a consent for one project and one task
+disable-live withdraw that consent (the offline demo result stays)
+run        one real unit: executor session, then a separate reviewer session, then record the usage it consumed
 setup      guided-setup writer: setup <instance-dir> start|status|show|save|accept|compose (see docs/guided-setup.md)
 """
 from __future__ import annotations
@@ -19,7 +22,7 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
-from . import backlog, check, config, feedback, rehearsal, report, statusline, usage, workflow
+from . import adapter, backlog, check, config, doctor, feedback, live, rehearsal, report, statusline, usage, workflow
 from . import setup as guided
 
 RATINGS = ["useful", "not-useful", "rework"]
@@ -63,10 +66,25 @@ def _setup_command(args) -> int:
     return 0
 
 
+def _live_readiness(root: Path) -> list[str]:
+    claude = doctor.find_claude()
+    if not claude:
+        return ["the Claude Code CLI was not found"]
+    return live.readiness(root, claude, usage.JsonFileUsage(usage.usage_path(root)), usage.now_utc(), os.environ, Path.home())
+
+
+def _live_status(reasons: list[str], root: Path) -> list[str]:
+    if not reasons:
+        return ["Everything needed is in place. Start one real unit with: python -m orgcore run " + str(root)]
+    return (["Real workers cannot start yet (the offline demo result stays valid):"] + [f"  - {r}" for r in reasons] +
+            ["Headless sessions give no usage readings. Keep one interactive Claude Code session open (see README, 'Enable real workers'),",
+             "then check again with: python -m orgcore usage " + str(root)])
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="orgcore")
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("check", "rehearse", "rate", "recover", "feedback", "report", "usage"):
+    for name in ("check", "rehearse", "rate", "recover", "feedback", "report", "usage", "enable-live", "disable-live", "run"):
         command = sub.add_parser(name)
         command.add_argument("instance", nargs="?", help=f"instance directory (default: ${config.INSTANCE_ENV})")
     sub.choices["rehearse"].add_argument("--rating", choices=RATINGS,
@@ -78,6 +96,9 @@ def main(argv: list[str] | None = None) -> int:
     sub.choices["rehearse"].add_argument("--crash-after", choices=rehearsal.STEPS,
                                          help="testing aid: kill this process abruptly after the first such step")
     sub.choices["recover"].add_argument("--max-age-minutes", type=int, required=True)
+    sub.choices["enable-live"].add_argument("--project", required=True, help="the one project real workers may touch")
+    sub.choices["enable-live"].add_argument("--task", required=True, help="exact text of the one waiting task row")
+    sub.choices["enable-live"].add_argument("--yes", action="store_true", help="write the consent (without it only the preview is shown)")
     sub.add_parser("usage-capture").add_argument("instance", help="instance directory")
     setup = sub.add_parser("setup")
     setup.add_argument("instance", help="instance directory")
@@ -129,6 +150,33 @@ def main(argv: list[str] | None = None) -> int:
                   f"{' (synthetic)' if r.synthetic else ''}, resets {backlog.format_time(r.resets_at)}")
         gate = usage.evaluate(instance.policy, readings, now)
         print("Dispatch gate: open" if gate.allowed else "Dispatch gate: closed\n" + "\n".join(f"  - {r}" for r in gate.reasons))
+    elif args.command == "enable-live":
+        print("\n".join(live.preview(instance, args.project, args.task)))
+        if not args.yes:
+            print("\nNothing was written. To give this consent, run the same command again with --yes.")
+            return 0
+        try:
+            live.grant(instance.root, args.project, args.task, usage.now_utc())
+        except ValueError as exc:
+            print(f"FAIL\n{exc}", file=sys.stderr)
+            return 1
+        reasons = _live_readiness(instance.root)
+        print("\nConsent written (policy.json: live_enabled true, scoped to this project and task).")
+        print("\n".join(_live_status(reasons, instance.root)))
+    elif args.command == "disable-live":
+        live.revoke(instance.root)
+        print("Real workers are off again (live_enabled false, consent removed). The offline demo is unaffected.")
+    elif args.command == "run":
+        try:
+            lines = live.run_unit(instance.root, doctor.find_claude() or [], os.environ, Path.home())
+        except adapter.Refused as exc:
+            print("Not started:", *[f"  - {r}" for r in exc.reasons], sep="\n", file=sys.stderr)
+            return 1
+        except (adapter.SessionFailed, workflow.RoleError) as exc:
+            print(f"FAIL: {exc}\nIf the row stayed in running, see: python -m orgcore recover {instance.root} --max-age-minutes 0",
+                  file=sys.stderr)
+            return 1
+        print("\n".join(lines))
     elif args.command == "feedback":
         print("\n".join(feedback.describe(feedback.summarize(instance))))
     elif args.command == "report":

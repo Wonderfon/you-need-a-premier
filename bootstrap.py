@@ -19,7 +19,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from orgcore import check, config, doctor, feedback, rehearsal  # noqa: E402
+from orgcore import backlog, check, config, doctor, feedback, live, rehearsal, usage  # noqa: E402
 from orgcore import setup as guided  # noqa: E402
 
 PROMPT = HERE / "prompts" / "setup-coordinator.md"
@@ -65,7 +65,8 @@ def local_checks(out, claude: list[str] | None, run) -> None:
             out(f"      {line}")
 
 
-def offline_rehearsal(root: Path, ask, out) -> int:
+def offline_rehearsal(root: Path, ask, out, claude: list[str] | None = None, environ=None, run=subprocess.run,
+                      home: Path | None = None) -> int:
     copy = root / "rehearsal"
     if not copy.exists():
         shutil.copytree(DEMO, copy)
@@ -74,7 +75,7 @@ def offline_rehearsal(root: Path, ask, out) -> int:
         out("The rehearsal copy is not valid:\n" + "\n".join(errors))
         return 1
     state = guided.load_state(root)
-    if state and state["phase"] != "demo_ready":
+    if state and state["phase"] in ("collecting", "validated"):  # a later phase is never moved backwards
         guided.set_phase(root, "demo_running", "offline-rehearsal")
     out("Offline rehearsal: fake workers take one pretend task through the whole workflow. No model, nothing sent.\n")
     rehearsal.rehearse(instance, None, emit=out)
@@ -82,7 +83,7 @@ def offline_rehearsal(root: Path, ask, out) -> int:
         out(f"\nThe fake worker's finished work ({path.name}):\n" + path.read_text(encoding="utf-8").rstrip())
     if not rehearsal.awaiting(instance):
         out("\nThis rehearsal already has your verdict.")
-        return 0
+        return live_offer(root, ask, out, claude, environ, run, home) if state and state["phase"] == "demo_ready" else 0
     choice = ask("\nWas this useful?  1 = useful   2 = not useful   3 = needs rework   Enter = decide later: ").strip()
     rating = {"1": "useful", "2": "not_useful", "3": "rework"}.get(choice)
     if not rating:
@@ -92,6 +93,67 @@ def offline_rehearsal(root: Path, ask, out) -> int:
     out(feedback.describe(feedback.summarize(instance))[0])
     if state:
         guided.set_phase(root, "demo_ready", "offline-rehearsal")
+        return live_offer(root, ask, out, claude, environ, run, home)
+    return 0
+
+
+def live_offer(root: Path, ask, out, claude: list[str] | None, environ, run, home: Path | None = None) -> int:
+    """After the demo has been rated: keep the offline demo (the default) or hand one task to real workers."""
+    answer = ask("\nKeep using the offline demo, or enable real Claude workers?\n"
+                 "  1 = keep the offline demo   2 = enable real workers: ").strip()
+    if answer != "2":
+        out("Staying with the offline demo. Nothing real is enabled (live_enabled stays false).")
+        return 0
+    if not (root / "org.json").exists():
+        out("Finish the guided setup first (menu 1): real workers need your organization, projects and a task on the board.")
+        return 0
+    instance = config.load_instance(root)
+    projects = live.real_projects(instance)
+    if not projects:
+        out("This organization has no real projects (only demo ones). Add one in the guided setup first.")
+        return 0
+    out("\nProjects real workers could take:")
+    for number, project in enumerate(projects, 1):
+        out(f"  {number}  {project['id']}  ({project['name']})")
+    picked = ask("Project number (Enter = cancel): ").strip()
+    if not picked.isdigit() or not 1 <= int(picked) <= len(projects):
+        out("Cancelled; nothing was written.")
+        return 0
+    project = projects[int(picked) - 1]
+    rows = live.waiting_rows(instance, project["id"])
+    if rows:
+        out(f"\nWaiting tasks of {project['id']}:")
+        for number, row in enumerate(rows, 1):
+            out(f"  {number}  {row.text}")
+    choice = ask("Task number, or type a new task line (Enter = cancel): ").strip()
+    if not choice:
+        out("Cancelled; nothing was written.")
+        return 0
+    new_row = not (choice.isdigit() and 1 <= int(choice) <= len(rows))
+    task = choice if new_row else rows[int(choice) - 1].text
+    out("\nThis is what would be handed to the model:\n" + "\n".join("  " + line for line in live.preview(instance, project["id"], task)))
+    if ask("\nType yes to write the consent for this one task: ").strip().lower() != "yes":
+        out("No consent was written.")
+        return 0
+    if new_row:
+        backlog.add_task(instance.backlog_path, project["line"], project["id"], task)
+    try:
+        live.grant(root, project["id"], task, usage.now_utc())
+    except ValueError as exc:
+        out(f"Not written: {exc}")
+        return 1
+    reasons = live.readiness(root, claude or [], usage.JsonFileUsage(usage.usage_path(root)), usage.now_utc(), environ,
+                             home or Path.home(), run) if claude else ["the Claude Code CLI was not found"]
+    out("\nConsent written (policy.json: live_enabled true, scoped to this project and task).")
+    if reasons:
+        out("Setup phase: live_waiting_for_usage. Real workers cannot start yet (the offline demo result stays valid):")
+        for reason in reasons:
+            out(f"  - {reason}")
+        out("Headless sessions give no usage readings. Keep one interactive Claude Code session open (README, 'Enable real workers'),\n"
+            f"then check with: python -m orgcore usage {root}")
+    else:
+        out("Everything needed is in place.")
+    out(f"Start one real unit when you are ready: python -m orgcore run {root}")
     return 0
 
 
@@ -154,7 +216,7 @@ def main(argv: list[str] | None = None, ask=input, out=print, claude_cmd: list[s
                     continue
                 return start_setup(root, claude, out, environ, run, call, home)
             if choice == "2":
-                return offline_rehearsal(root, ask, out)
+                return offline_rehearsal(root, ask, out, claude, environ, run, home)
             if choice == "3":
                 return 0
             out("Please type 1, 2 or 3.")

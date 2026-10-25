@@ -197,7 +197,7 @@ class Rehearsal(BootstrapCase):
         guided.start(self.inst)
         session = Session(self)
         with mock.patch("shutil.which", return_value=None):
-            self.assertEqual(session.run(["2", "1"], claude=None), 0, session.text)
+            self.assertEqual(session.run(["2", "1", "1"], claude=None), 0, session.text)  # 1 = keep the offline demo
         state = guided.load_state(self.inst)
         self.assertEqual((state["phase"], state["demo_run_id"]), ("demo_ready", "offline-rehearsal"))
 

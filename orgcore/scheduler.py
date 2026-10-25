@@ -13,7 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from fractions import Fraction
-from typing import Iterable
+from typing import Callable, Iterable
 
 from . import backlog, ledger, usage
 from .check import weight_problems
@@ -95,14 +95,14 @@ def format_reset(moment: datetime) -> str:
 
 
 def choose(board: backlog.Backlog, spend: dict[str, float], projects: Iterable[str] | None = None,
-           estimate: float = UNMEASURED_COST) -> backlog.Task | None:
+           estimate: float = UNMEASURED_COST, accept: Callable[[backlog.Task], bool] | None = None) -> backlog.Task | None:
     wanted = set(projects) if projects is not None else None
     best, best_score = None, None
     for line, weight in board.weights.items():
         if weight is None:
             continue
         rows = [t for t in board.tasks if t.section == line and t.state in DISPATCHABLE
-                and (wanted is None or t.project in wanted)]
+                and (wanted is None or t.project in wanted) and (accept is None or accept(t))]
         row = next((t for t in rows if t.state == "rework"), rows[0] if rows else None)  # sent-back work goes first
         if row is None:
             continue
@@ -113,7 +113,7 @@ def choose(board: backlog.Backlog, spend: dict[str, float], projects: Iterable[s
 
 
 def dispatch(instance: Instance, source: usage.UsageSource, actor: str, now: datetime | None = None,
-             projects: Iterable[str] | None = None) -> Dispatch | Refusal:
+             projects: Iterable[str] | None = None, accept: Callable[[backlog.Task], bool] | None = None) -> Dispatch | Refusal:
     moment = now or usage.now_utc()
 
     def change(board: backlog.Backlog):
@@ -128,7 +128,7 @@ def dispatch(instance: Instance, source: usage.UsageSource, actor: str, now: dat
         if running >= instance.policy["max_concurrency"]:
             return Refusal("busy", [f"{running} row(s) running; max_concurrency is {instance.policy['max_concurrency']}"])
         events = ledger.read(instance.root)
-        task = choose(board, recent_spend(events, moment), projects, typical_cost(events, moment))
+        task = choose(board, recent_spend(events, moment), projects, typical_cost(events, moment), accept)
         if task is None:
             return Refusal("no_work", ["no todo or rework row to dispatch"])
         try:
