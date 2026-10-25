@@ -39,9 +39,11 @@ def _short(path: str) -> str:
 def hook_command(python: str, root: Path) -> str:
     """The status-line command for `statusLine`. The CLI runs it through the machine's shell, and some Windows setups use
     PowerShell, where a quoted program path at the start is a syntax error. So the paths are written with forward slashes
-    and without quotes when they hold no space (this is also how the CLI's own examples write them); a path that still
+    and without quotes when they hold no space (this is also how the CLI's own examples write them); the program is the
+    repository's `usage_hook.py`, which works from any folder. A path that still
     holds a space is quoted, with a leading `& ` on Windows (PowerShell syntax; a cmd or bash shell needs a space-free path)."""
-    parts = [_short(python), "-m", "orgcore", "usage-capture", _short(str(root))]
+    hook = Path(__file__).resolve().parent.parent / "usage_hook.py"  # runs from any folder; `-m orgcore` would need it importable
+    parts = [_short(python), _short(str(hook)), _short(str(root))]
     if not any(" " in p for p in parts):
         return " ".join(parts)
     quoted = " ".join(f'"{p}"' if " " in p else p for p in parts)

@@ -22,6 +22,30 @@ The coordinator saves through `python -m orgcore setup <instance> save <block> -
 
 Resuming reads these files, never a chat history: run `bootstrap.py` again and the coordinator starts from `status`.
 
+A successful `save` is already an accepted answer: the checkpoint is written in the same call. `accept` exists only to finish a save that was interrupted in between; you never need it in a normal run.
+
+### Answer shapes (for saving by hand)
+
+The exact examples the coordinator follows are in `prompts/setup-coordinator.md`. In short:
+
+| block | shape |
+|---|---|
+| `identity` | `{"organization_name": "...", "owner_name": "...", "instance_id": "slug"}` |
+| `goal` | `{"goal": "..."}` |
+| `lines` | `{"lines": [{"id": "slug", "name": "..."}]}` |
+| `projects` | `{"projects": [{"id": "slug", "name": "...", "line": "<line id>", "path": null}]}` every line needs a project |
+| `weights` | `{"lines": {"<line id>": 1}, "projects": {"<project id>": 1}}` numbers above 0, one per id |
+| `time` | `{"timezone": "UTC"}` |
+| `reporting` | `{"report_times": ["09:00"], "quiet_hours": {"start": "23:00", "end": "08:00"}, "preferred": "local"}` |
+| `spending` | `{"currency": "USD", "period": "month", "cap": 0}` |
+| `subscription` | `{"windows": [{"name": "5-hour", "reserve_percent": 20, "max_share_percent": 50, "max_observation_age_minutes": 30}], "max_concurrency": 1}` |
+| `rules` | `{"text": "..."}` |
+| `confirm` | `{"confirmed": true}` after every other block is accepted |
+
+On Windows PowerShell 5 a `--json '{...}'` argument loses its double quotes; use `--file answer.json` or `--json -` with the text piped in. PowerShell 7 and bash take the single-quoted form as written.
+
+After the last block, `python -m orgcore setup <instance> status` ends with a `Next step:` line naming the command to run next.
+
 ## Blocks
 
 `identity`, `goal`, `lines`, `projects`, `weights`, `time`, `reporting`, `spending`, `subscription`, `rules`, `install`, `confirm`. `install` is filled in by the script itself after the subscription check. `confirm` runs `compose`, which writes `org.json`, `policy.json`, `reporting.json` and an empty `projects/backlog.md` from the answers, never replacing a file that already differs.

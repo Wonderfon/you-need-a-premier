@@ -81,18 +81,32 @@ class RealShape(InstanceCase):
 
 
 class HookCommand(unittest.TestCase):
+    HOOK = (Path(statusline.__file__).resolve().parent.parent / "usage_hook.py").as_posix()
+
     def test_a_path_without_spaces_is_written_unquoted_with_forward_slashes(self):
-        with mock.patch.object(sys, "platform", "win32"):
-            self.assertEqual(statusline.hook_command("C:\\py\\python.exe", Path("C:/inst")),
-                             "C:/py/python.exe -m orgcore usage-capture C:/inst")
+        with mock.patch.object(sys, "platform", "win32"), mock.patch.object(statusline, "_short", side_effect=lambda p: p.replace("\\", "/")):
+            command = statusline.hook_command("C:\\py\\python.exe", Path("C:/inst"))
+        self.assertEqual(command, f"C:/py/python.exe {self.HOOK} C:/inst")
+        self.assertNotIn('"', command)
 
     def test_a_path_with_a_space_is_quoted_and_on_windows_starts_with_the_call_operator(self):
         with mock.patch.object(statusline, "_short", side_effect=lambda p: p.replace("\\", "/")):
             with mock.patch.object(sys, "platform", "win32"):
-                self.assertEqual(statusline.hook_command("C:\\Program Files\\py\\python.exe", Path("C:/inst")),
-                                 '& "C:/Program Files/py/python.exe" -m orgcore usage-capture C:/inst')
+                self.assertTrue(statusline.hook_command("C:\\Program Files\\py\\python.exe", Path("C:/inst"))
+                                .startswith('& "C:/Program Files/py/python.exe" '))
             with mock.patch.object(sys, "platform", "linux"):
                 self.assertTrue(statusline.hook_command("/opt/my py/python", Path("/x")).startswith('"/opt/my py/python" '))
+
+    def test_the_hook_runs_from_any_folder_and_records_the_reading(self):
+        import subprocess
+        import tempfile
+        payload = json.dumps({**REAL, "rate_limits": {"five_hour": {"used_percentage": 40, "resets_at": int(usage.now_utc().timestamp()) + 9999}}})
+        hook = Path(statusline.__file__).resolve().parent.parent / "usage_hook.py"
+        with tempfile.TemporaryDirectory() as other, tempfile.TemporaryDirectory() as inst:
+            (Path(inst) / "state").mkdir()
+            done = subprocess.run([sys.executable, str(hook), inst], input=payload, capture_output=True, text=True, cwd=other)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            self.assertIn("five 40%", done.stdout)
 
 
 class Capture(InstanceCase):

@@ -354,6 +354,11 @@ def describe(root: Path) -> list[str]:
             extra = "  <- an answer is on disk but not accepted; run accept"
         lines.append(f"  {block:<13}{status}{extra}")
     lines.append(f"Next question: {state['pending_question'] or 'none, every block is accepted'}")
+    hints = {"collecting": f"python -m orgcore setup {root} compose" if state["pending_question"] is None else None,
+             "validated": f"python bootstrap.py --instance {root}   (menu 2: the offline rehearsal)",
+             "demo_ready": f"python -m orgcore enable-live {root} --project <id> --task \"<task line>\"   (or keep the offline demo)"}
+    if hints.get(state["phase"]):
+        lines.append("Next step: " + hints[state["phase"]])
     return lines
 
 

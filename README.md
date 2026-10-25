@@ -12,6 +12,33 @@ python bootstrap.py
 
 It checks this machine, asks for your consent, and starts the official Claude Code CLI with the coordinator's setup prompt. The interview happens there, on your own subscription sign-in; this repository never asks for a credential and never calls a model itself. Answers are saved as files in the directory you choose and the setup can be stopped and continued at any time. The menu also offers an offline rehearsal that needs no CLI. Details: `docs/guided-setup.md`.
 
+Setup ends with a `Next step:` line (`python -m orgcore setup <instance> status` prints it again). When the interview is done and the rehearsal is rated, continue with "Enable real workers" below, or stay on the offline demo.
+
+## Run the tests
+
+```
+python -m unittest
+```
+
+Run from the repository root, on Windows (`py -3.12 -m unittest`) or Linux.
+
+## Try the demo
+
+```
+python -m orgcore check examples/demo
+```
+
+Everything in `examples/` is fictional. Walk one row through dispatch, review, rework and an owner rating, offline, on a copy:
+
+```
+cp -r examples/demo /tmp/demo-instance        # Windows: Copy-Item -Recurse examples\demo $env:TEMP\demo-instance
+python -m orgcore rehearse /tmp/demo-instance              # stops at the result so you can read it first
+python -m orgcore rate /tmp/demo-instance useful           # then record your verdict (rehearse --rating does both at once)
+python -m orgcore report /tmp/demo-instance                # writes reports/<date>-<HHMM>.md when a slot is due
+```
+
+The demo uses the time zone `UTC`, which works everywhere. If you set a named zone such as `America/New_York` in your own `reporting.json`, Windows needs the `tzdata` package (`python -m pip install tzdata`); without it `check` prints a warning and `report` fails with a clear message.
+
 ## Enable real workers
 
 Real execution is off until you turn it on, for one project and one task at a time. Nothing here spends money: the sessions run on your own Claude subscription sign-in, and no API key is ever used or accepted.
@@ -40,31 +67,6 @@ Real execution is off until you turn it on, for one project and one task at a ti
    ```
 
    It takes the consented row through an executor session, then a separate reviewer session (different prompt, different session id, different identity), and then records how much of your usage window the unit consumed. If any check fails it lists the reasons and starts nothing. One command, one executor round and one review; a row sent back for rework is run again by the next command.
-
-## Run the tests
-
-```
-python -m unittest
-```
-
-Run from the repository root, on Windows (`py -3.12 -m unittest`) or Linux.
-
-## Try the demo
-
-```
-python -m orgcore check examples/demo
-```
-
-Everything in `examples/` is fictional. Walk one row through dispatch, review, rework and an owner rating, offline, on a copy:
-
-```
-cp -r examples/demo /tmp/demo-instance        # Windows: Copy-Item -Recurse examples\demo $env:TEMP\demo-instance
-python -m orgcore rehearse /tmp/demo-instance              # stops at the result so you can read it first
-python -m orgcore rate /tmp/demo-instance useful           # then record your verdict (rehearse --rating does both at once)
-python -m orgcore report /tmp/demo-instance                # writes reports/<date>-<HHMM>.md when a slot is due
-```
-
-The demo uses the time zone `UTC`, which works everywhere. If you set a named zone such as `America/New_York` in your own `reporting.json`, Windows needs the `tzdata` package (`python -m pip install tzdata`); without it `check` prints a warning and `report` fails with a clear message.
 
 ## Layout
 
