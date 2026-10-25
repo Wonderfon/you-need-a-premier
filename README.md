@@ -28,10 +28,11 @@ Real execution is off until you turn it on, for one project and one task at a ti
 3. Headless (`claude -p`) sessions produce no usage readings, and readings go stale. So keep one interactive Claude Code session open that runs the status-line hook (`docs/real-workers.md`), for example:
 
    ```
-   claude --settings '{"statusLine":{"type":"command","command":"python -m orgcore usage-capture <instance>"}}'
+   python -m orgcore hook-settings <instance>      # writes <instance>/state/statusline-settings.json and prints the command
+   claude --settings <instance>/state/statusline-settings.json
    ```
 
-   Run it from the repository folder (or give `python` the full path to it) so the hook finds `orgcore`; quote the JSON the way your shell needs. The session can stay idle; the readings refresh as it redraws its status line. Check with `python -m orgcore usage <instance>`; the gate opens when every window has a fresh reading under its limits.
+   The settings go in a file on purpose: quoting inline JSON differs between PowerShell and other shells, and the hook command inside is written so that it also runs under PowerShell. Run `hook-settings` with the same Python that has `orgcore` importable. The session can stay idle; the readings refresh every few seconds while it is open. Plans differ in what they report: a subscription may report only the 5-hour window (an enterprise plan did), and a window that is never reported keeps the gate closed. List in `policy.json` only the windows your plan reports. Check with `python -m orgcore usage <instance>`; the gate opens when every window has a fresh reading under its limits.
 4. Start one real unit:
 
    ```

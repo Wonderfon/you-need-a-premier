@@ -19,7 +19,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from orgcore import backlog, check, config, doctor, feedback, live, rehearsal, usage  # noqa: E402
+from orgcore import backlog, check, config, doctor, feedback, live, rehearsal, statusline, usage  # noqa: E402
 from orgcore import setup as guided  # noqa: E402
 
 PROMPT = HERE / "prompts" / "setup-coordinator.md"
@@ -49,7 +49,7 @@ def launch_command(claude: list[str], prompt: Path, root: Path) -> list[str]:
     allowed = f'Bash("{sys.executable}" -m orgcore setup:*)'
     # the first message comes before the options: --allowedTools takes a list and would swallow a trailing argument
     # the status line is how an interactive session hands its usage windows to state/usage.json
-    status_line = {"statusLine": {"type": "command", "command": f'"{sys.executable}" -m orgcore usage-capture "{root}"'}}
+    status_line = {"statusLine": {"type": "command", "command": statusline.hook_command(sys.executable, root)}}
     return [*claude, FIRST_MESSAGE, "--append-system-prompt-file", str(prompt), "--add-dir", str(root),
             "--settings", json.dumps(status_line), "--allowedTools", allowed]
 

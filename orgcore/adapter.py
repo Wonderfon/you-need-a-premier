@@ -24,9 +24,9 @@ NAMESPACE = uuid.UUID("3b1f6a52-8f43-4f5e-9d54-6f0f3a1d7c10")
 SESSION_TIMEOUT_SECONDS = 1800
 ROLES = {
     "executor": {"actor": "claude-executor-1", "allowed": ("Read", "Edit", "Write", "Glob", "Grep"),
-                 "denied": ("Bash", "WebFetch", "WebSearch")},
+                 "denied": ("Bash", "PowerShell", "WebFetch", "WebSearch")},
     "reviewer": {"actor": "claude-reviewer-1", "allowed": ("Read", "Glob", "Grep"),
-                 "denied": ("Bash", "Edit", "Write", "WebFetch", "WebSearch", "NotebookEdit")},
+                 "denied": ("Bash", "PowerShell", "Edit", "Write", "WebFetch", "WebSearch", "NotebookEdit")},
 }
 
 

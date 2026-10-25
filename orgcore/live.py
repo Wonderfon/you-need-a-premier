@@ -49,16 +49,21 @@ def _setup_phase(root: Path):
         return None
 
 
-def grant(root: Path, project_id: str, task_text: str, now: datetime) -> None:
-    """Write the scoped consent. Raises ValueError with the reason when it must not be written."""
-    instance = config.load_instance(root)
-    state = _setup_phase(root)
+def validate(instance: Instance, project_id: str, task_text: str) -> None:
+    """Raise ValueError with the reason when a consent for this project and task must not be written."""
+    state = _setup_phase(instance.root)
     if state and state["phase"] not in ("demo_ready", "live_waiting_for_usage", "live_ready"):
         raise ValueError("run the offline rehearsal and rate it first; real workers are offered after it")
     if project_id not in {p["id"] for p in real_projects(instance)}:
         raise ValueError(f"'{project_id}' is not a real project of this instance (demo projects cannot be given to a model)")
     if not any(t.text == task_text for t in waiting_rows(instance, project_id)):
         raise ValueError(f"no waiting row '{task_text}' for project '{project_id}' on the board")
+
+
+def grant(root: Path, project_id: str, task_text: str, now: datetime) -> None:
+    """Write the scoped consent. Raises ValueError with the reason when it must not be written."""
+    instance = config.load_instance(root)
+    validate(instance, project_id, task_text)
     policy = {**instance.policy, "live_enabled": True,
               "live_consent": {"granted_at": backlog.format_time(now), "projects": [project_id], "task_scope": task_text}}
     config.save_file(root, "policy.json", policy, overwrite=True)
@@ -121,7 +126,7 @@ def run_unit(root: Path, claude: list[str], environ, home: Path | None = None, r
             if attempt > 1:
                 notes = (ledger.for_task(ledger.read(root), key, "reviewed") or [{"evidence": ""}])[-1]["evidence"]
             evidence = executor.work(key, attempt, moment, notes)
-            workflow.submit(instance, key, executor.actor, evidence, moment)
+            workflow.submit(instance, key, executor.actor, evidence, now or usage.now_utc())
         out.append(f"running -> review: {executor.actor} submitted {evidence}")
     elif row.state == "review":
         key = row.key
@@ -134,10 +139,11 @@ def run_unit(root: Path, claude: list[str], environ, home: Path | None = None, r
         raise adapter.Refused([f"the consented task is '{row.state}'; grant a new consent to run another task"])
     events = ledger.read(root)
     executor_actor = ledger.for_task(events, key, "dispatched")[-1]["actor"]
-    verdict, notes = reviewer.judge(key, attempt, evidence, executor_actor, moment)
-    workflow.review(instance, key, reviewer.actor, verdict, notes, moment)
+    later = now or usage.now_utc()  # the executor ran for minutes; readings taken meanwhile must not look "from the future"
+    verdict, notes = reviewer.judge(key, attempt, evidence, executor_actor, later)
+    workflow.review(instance, key, reviewer.actor, verdict, notes, later)
     out.append(f"review -> {workflow.VERDICTS[verdict]}: {reviewer.actor} says {verdict}")
-    reading = scheduler.settle(instance, source, key, moment)
+    reading = scheduler.settle(instance, source, key, now or usage.now_utc())
     out.append("usage consumed: " + (f"{reading['delta']:g} points of {reading['window']}" if reading["delta"] is not None
                                      else f"not measured ({reading['reason']}); counted as a typical run"))
     return out

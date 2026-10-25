@@ -26,7 +26,7 @@ One session of the official CLI per role and attempt. A session starts only if a
 |---|---|---|
 | prompt | `prompts/executor.md` | `prompts/reviewer.md` |
 | allowed tools | Read, Edit, Write, Glob, Grep | Read, Glob, Grep |
-| denied tools | Bash, WebFetch, WebSearch | Bash, Edit, Write, WebFetch, WebSearch, NotebookEdit |
+| denied tools | Bash, PowerShell, WebFetch, WebSearch | Bash, PowerShell, Edit, Write, WebFetch, WebSearch, NotebookEdit |
 | ends with | `EVIDENCE: <relative path>` | `VERDICT: pass`, `VERDICT: rework` or `VERDICT: blocked` |
 
 Common to both: `-p` with `--output-format json`, `--permission-mode dontAsk` (anything not allowed is refused instead of asked), `--add-dir` and the working directory set to the project's folder (`path` in `org.json`, else `<instance>/work/<project>`), a fresh `--session-id` derived from instance, row, role and attempt, and the environment with the billing variables removed. An instance can keep its own edited copy of a prompt in `<instance>/prompts/`; it wins over the packaged one and is never rewritten.

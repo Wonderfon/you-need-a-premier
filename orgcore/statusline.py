@@ -14,6 +14,7 @@ session does this) or the gate stays closed because the readings go stale.
 from __future__ import annotations
 
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -23,6 +24,28 @@ from .usage import Observation, UsageUnavailable, usage_path
 
 SOURCE = "claude-code-statusline"
 WINDOWS = ("five_hour", "seven_day")
+
+
+def _short(path: str) -> str:
+    """Forward slashes; on Windows the 8.3 short form when the path holds a space (that form needs no quoting)."""
+    if " " in path and sys.platform.startswith("win"):
+        import ctypes
+        buf = ctypes.create_unicode_buffer(1024)
+        if ctypes.windll.kernel32.GetShortPathNameW(path, buf, 1024):
+            path = buf.value
+    return path.replace("\\", "/")
+
+
+def hook_command(python: str, root: Path) -> str:
+    """The status-line command for `statusLine`. The CLI runs it through the machine's shell, and some Windows setups use
+    PowerShell, where a quoted program path at the start is a syntax error. So the paths are written with forward slashes
+    and without quotes when they hold no space (this is also how the CLI's own examples write them); a path that still
+    holds a space is quoted, with a leading `& ` on Windows (PowerShell syntax; a cmd or bash shell needs a space-free path)."""
+    parts = [_short(python), "-m", "orgcore", "usage-capture", _short(str(root))]
+    if not any(" " in p for p in parts):
+        return " ".join(parts)
+    quoted = " ".join(f'"{p}"' if " " in p else p for p in parts)
+    return "& " + quoted if sys.platform.startswith("win") else quoted
 
 
 def parse(text: str, now: datetime) -> tuple[list[Observation], list[str]]:

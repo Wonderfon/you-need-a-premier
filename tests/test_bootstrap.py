@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest import mock
 
 import bootstrap
-from orgcore import config, doctor, feedback
+from orgcore import config, doctor, feedback, statusline
 from orgcore import setup as guided
 
 from .support import ROOT
@@ -72,7 +72,7 @@ class Launch(BootstrapCase):
         self.assertNotIn("--bare", argv)
         status_line = json.loads(argv[argv.index("--settings") + 1])["statusLine"]
         self.assertEqual(status_line["type"], "command")
-        self.assertIn(f'-m orgcore usage-capture "{self.inst.resolve()}"', status_line["command"])
+        self.assertEqual(status_line["command"], statusline.hook_command(sys.executable, self.inst.resolve()))
         self.assertFalse(launch["prompt_has_placeholder"])
         self.assertTrue(launch["prompt_names_instance"])
         self.assertEqual(Path(launch["cwd"]).resolve(), self.inst.resolve())

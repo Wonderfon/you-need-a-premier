@@ -1,8 +1,11 @@
 import contextlib
 import io
 import json
+import sys
 import unittest
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from unittest import mock
 
 from orgcore import __main__ as cli
 from orgcore import backlog, ledger, scheduler, statusline, usage
@@ -44,6 +47,52 @@ class Parse(unittest.TestCase):
         found, notes = statusline.parse(payload(seven_day={"used_percentage": 3, "resets_at": EPOCH}), NOW)
         self.assertEqual([o.window for o in found], ["seven_day"])
         self.assertEqual(notes, ["five_hour: not reported"])
+
+
+REAL = json.loads((Path(__file__).with_name("fixtures") / "statusline-real-2.1.310.json").read_text(encoding="utf-8"))
+
+
+class RealShape(InstanceCase):
+    """A status payload captured from a real interactive session (CLI 2.1.310, enterprise plan), identity fields removed."""
+    BEFORE_RESET = datetime.fromtimestamp(REAL["rate_limits"]["five_hour"]["resets_at"] - 3600, timezone.utc)
+
+    def test_the_fields_the_parser_reads_are_where_the_real_cli_puts_them(self):
+        found, notes = statusline.parse(json.dumps(REAL), self.BEFORE_RESET)
+        [reading] = found
+        self.assertEqual((reading.window, reading.used_percent, reading.synthetic), ("five_hour", 71.0, False))
+        self.assertEqual(reading.resets_at, datetime.fromtimestamp(REAL["rate_limits"]["five_hour"]["resets_at"], timezone.utc))
+        self.assertEqual(reading.source, "claude-code-statusline 2.1.310")
+        self.assertEqual(notes, ["seven_day: not reported"])  # this plan reports one window only
+
+    def test_a_policy_that_lists_a_window_the_plan_never_reports_keeps_the_gate_closed(self):
+        statusline.capture(self.root, json.dumps(REAL), self.BEFORE_RESET)
+        readings = JsonFileUsage(usage.usage_path(self.root)).observe()
+        gate = usage.evaluate(self.instance().policy, readings, self.BEFORE_RESET)
+        self.assertFalse(gate.allowed)
+        self.assertTrue(any("seven_day" in r for r in gate.reasons), gate.reasons)
+        self.edit_policy(subscription_windows=[{**self.instance().policy["subscription_windows"][0], "reserve_percent": 10,
+                                                "max_share_percent": 90}])
+        self.assertTrue(usage.evaluate(self.instance().policy, readings, self.BEFORE_RESET).allowed)
+
+    def test_the_fixture_holds_no_identity(self):
+        text = json.dumps(REAL)
+        for part in ("/Users/", "C:\\\\", "@"):
+            self.assertNotIn(part, text)
+
+
+class HookCommand(unittest.TestCase):
+    def test_a_path_without_spaces_is_written_unquoted_with_forward_slashes(self):
+        with mock.patch.object(sys, "platform", "win32"):
+            self.assertEqual(statusline.hook_command("C:\\py\\python.exe", Path("C:/inst")),
+                             "C:/py/python.exe -m orgcore usage-capture C:/inst")
+
+    def test_a_path_with_a_space_is_quoted_and_on_windows_starts_with_the_call_operator(self):
+        with mock.patch.object(statusline, "_short", side_effect=lambda p: p.replace("\\", "/")):
+            with mock.patch.object(sys, "platform", "win32"):
+                self.assertEqual(statusline.hook_command("C:\\Program Files\\py\\python.exe", Path("C:/inst")),
+                                 '& "C:/Program Files/py/python.exe" -m orgcore usage-capture C:/inst')
+            with mock.patch.object(sys, "platform", "linux"):
+                self.assertTrue(statusline.hook_command("/opt/my py/python", Path("/x")).startswith('"/opt/my py/python" '))
 
 
 class Capture(InstanceCase):

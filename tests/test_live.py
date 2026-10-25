@@ -220,6 +220,21 @@ class Cli(LiveCase):
         self.assertIn("Nothing was written", out)
         self.assertFalse(self.instance().policy["live_enabled"])
 
+    def test_a_task_that_is_not_on_the_board_is_refused_before_any_preview(self):
+        code, out, err = self.call("enable-live", self.root, "--project", "demo-notes", "--task", "No such task", "--yes")
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertIn("no waiting row 'No such task'", err)
+        self.assertFalse(self.instance().policy["live_enabled"])
+
+    def test_hook_settings_writes_a_file_whose_command_is_the_hook_command(self):
+        code, out, _ = self.call("hook-settings", self.root)
+        target = self.root / "state" / "statusline-settings.json"
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(target.read_text(encoding="utf-8"))["statusLine"],
+                         {"type": "command", "command": statusline.hook_command(sys.executable, self.root)})
+        self.assertIn(f"claude --settings {target}", out)
+
     def test_yes_writes_the_consent_and_without_a_reading_says_what_is_missing(self):
         code, out, _ = self.call("enable-live", self.root, "--project", "demo-notes", "--task", TASK, "--yes")
         self.assertEqual(code, 0)

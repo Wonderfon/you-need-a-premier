@@ -10,6 +10,7 @@ usage      show the usage readings in state/usage.json and whether the dispatch 
 usage-capture  status-line hook for the official CLI: reads its status JSON on stdin and records the usage windows
 enable-live  show what real workers would get, then (with --yes) write a consent for one project and one task
 disable-live withdraw that consent (the offline demo result stays)
+hook-settings  write the settings file that makes an interactive session record usage readings, and print the command
 run        one real unit: executor session, then a separate reviewer session, then record the usage it consumed
 setup      guided-setup writer: setup <instance-dir> start|status|show|save|accept|compose (see docs/guided-setup.md)
 """
@@ -24,6 +25,7 @@ from pathlib import Path
 
 from . import adapter, backlog, check, config, doctor, feedback, live, rehearsal, report, statusline, usage, workflow
 from . import setup as guided
+from .fsio import atomic_write
 
 RATINGS = ["useful", "not-useful", "rework"]
 
@@ -84,7 +86,7 @@ def _live_status(reasons: list[str], root: Path) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="orgcore")
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("check", "rehearse", "rate", "recover", "feedback", "report", "usage", "enable-live", "disable-live", "run"):
+    for name in ("check", "rehearse", "rate", "recover", "feedback", "report", "usage", "enable-live", "disable-live", "run", "hook-settings"):
         command = sub.add_parser(name)
         command.add_argument("instance", nargs="?", help=f"instance directory (default: ${config.INSTANCE_ENV})")
     sub.choices["rehearse"].add_argument("--rating", choices=RATINGS,
@@ -151,6 +153,11 @@ def main(argv: list[str] | None = None) -> int:
         gate = usage.evaluate(instance.policy, readings, now)
         print("Dispatch gate: open" if gate.allowed else "Dispatch gate: closed\n" + "\n".join(f"  - {r}" for r in gate.reasons))
     elif args.command == "enable-live":
+        try:
+            live.validate(instance, args.project, args.task)
+        except ValueError as exc:
+            print(f"FAIL\n{exc}", file=sys.stderr)
+            return 1
         print("\n".join(live.preview(instance, args.project, args.task)))
         if not args.yes:
             print("\nNothing was written. To give this consent, run the same command again with --yes.")
@@ -163,6 +170,12 @@ def main(argv: list[str] | None = None) -> int:
         reasons = _live_readiness(instance.root)
         print("\nConsent written (policy.json: live_enabled true, scoped to this project and task).")
         print("\n".join(_live_status(reasons, instance.root)))
+    elif args.command == "hook-settings":
+        target = instance.root / "state" / "statusline-settings.json"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        atomic_write(target, (json.dumps({"statusLine": {"type": "command", "command": statusline.hook_command(
+            sys.executable, instance.root)}}, indent=2) + "\n").encode("utf-8"))
+        print(f"Wrote {target}\nStart the interactive session that supplies usage readings with:\n  claude --settings {target}")
     elif args.command == "disable-live":
         live.revoke(instance.root)
         print("Real workers are off again (live_enabled false, consent removed). The offline demo is unaffected.")
