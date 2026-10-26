@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="836" height="199" viewBox="0 0 836 199">
+<title>dispatch gate: the week is 36% used, the pace line allows 23%</title>
+<rect width="836" height="199" rx="10" fill="#1e1f24"/>
+<rect width="836" height="32" rx="10" fill="#2b2d34"/><rect y="20" width="836" height="12" fill="#2b2d34"/>
+<circle cx="18" cy="16" r="6" fill="#ff5f56"/><circle cx="38" cy="16" r="6" fill="#ffbd2e"/><circle cx="58" cy="16" r="6" fill="#27c93f"/>
+<text x="418" y="21" fill="#9aa0aa" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" text-anchor="middle">dispatch gate: the week is 36% used, the pace line allows 23%</text>
+<text x="20" y="56" font-family="Consolas, 'Cascadia Mono', 'DejaVu Sans Mono', monospace" font-size="14" xml:space="preserve"><tspan fill="#7ee787">$ </tspan><tspan fill="#f0f3f6">python -m orgcore usage demo-instance</tspan></text>
+<text x="20" y="77" fill="#c9d1d9" font-family="Consolas, 'Cascadia Mono', 'DejaVu Sans Mono', monospace" font-size="14" xml:space="preserve">five_hour: 12% used, observed 2026-10-26T01:55:25Z by demo-fixture, resets 2026-10-26T04:55:25Z</text>
+<text x="20" y="98" fill="#c9d1d9" font-family="Consolas, 'Cascadia Mono', 'DejaVu Sans Mono', monospace" font-size="14" xml:space="preserve">seven_day: 36% used, observed 2026-10-26T01:55:25Z by demo-fixture, resets 2026-10-30T13:55:25Z</text>
+<text x="20" y="119" fill="#ffa657" font-family="Consolas, 'Cascadia Mono', 'DejaVu Sans Mono', monospace" font-size="14" xml:space="preserve">Dispatch gate: closed</text>
+<text x="20" y="140" fill="#ffa657" font-family="Consolas, 'Cascadia Mono', 'DejaVu Sans Mono', monospace" font-size="14" xml:space="preserve">  - seven_day: used 36% is ahead of the pace line (22.9%)</text>
+<text x="20" y="185" fill="#8b949e" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12">Fictional readings. The gate names the window and the cause; an unknown or stale reading closes it too.</text>
+</svg>
