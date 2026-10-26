@@ -11,7 +11,7 @@ spec = importlib.util.spec_from_file_location("make_screenshots", ROOT / "tools"
 shots = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(shots)
 
-NAMES = ("pace-line", "usage-gate", "rehearsal", "setup-status")
+NAMES = ("pace-line", "usage-gate", "rehearsal", "real-run")
 
 
 class Screenshots(unittest.TestCase):

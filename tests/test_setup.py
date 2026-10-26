@@ -51,6 +51,30 @@ class SetupCase(unittest.TestCase):
         return "\n".join(caught.exception.errors)
 
 
+class PaceLine(SetupCase):
+    def paced(self, **extra):
+        window = {**ANSWERS[8][1]["windows"][0], **extra}
+        return {**ANSWERS[8][1], "windows": [window]}
+
+    def test_the_coordinator_is_told_to_ask_about_the_pace_line(self):
+        prompt = (Path(__file__).resolve().parent.parent / "prompts" / "setup-coordinator.md").read_text(encoding="utf-8")
+        self.assertIn("pace line on", prompt)
+        self.assertIn("pacing_slack_percent", prompt)
+
+    def test_a_paced_window_is_saved_and_reaches_policy_json(self):
+        self.fill(upto="subscription")
+        guided.save(self.root, "subscription", self.paced(length_hours=5, pacing_slack_percent=5))
+        for block, answer in ANSWERS[9:]:
+            guided.save(self.root, block, answer)
+        guided.compose(self.root)
+        window = json.loads((self.root / "policy.json").read_text(encoding="utf-8"))["subscription_windows"][0]
+        self.assertEqual((window["length_hours"], window["pacing_slack_percent"]), (5, 5))
+
+    def test_one_of_the_two_pace_fields_alone_is_refused(self):
+        self.fill(upto="subscription")
+        self.assertIn("go together", self.errors("subscription", self.paced(length_hours=5)))
+
+
 class Checkpoint(SetupCase):
     def test_start_is_idempotent_and_asks_identity_first(self):
         state = guided.start(self.root)

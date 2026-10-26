@@ -1,6 +1,6 @@
-# 你需要一个总理 (orgcore, working English name)
+# 你需要一个总理 (You need a premier)
 
-**For people whose ideas outrun their capacity to execute.** You say what you intend. A coordinator (the "总理") takes that intent, hands work to AI agents, and pushes it forward relentlessly, pacing itself against whatever subscription usage you have left, and never touching the share you keep for yourself.
+**For people whose ideas outrun their capacity to execute.** You say what you intend. A coordinator (the "premier", 总理) takes that intent, hands work to AI agents, and pushes it forward relentlessly, pacing itself against whatever subscription usage you have left, and never touching the share you keep for yourself.
 
 It is a small, text-first core: a plain-text task board, a coordinator-led setup run in the official Claude Code CLI, executors and reviewers kept apart, and a dispatch gate that reads your real usage. Python 3.11+, standard library only. It runs on your own subscription sign-in; it never asks for an API key and never spends money.
 
@@ -10,13 +10,24 @@ It is a small, text-first core: a plain-text task board, a coordinator-led setup
 
 Status: v0.1 in progress. Real work runs one unit at a time on your command (`python -m orgcore run`); a loop that keeps going unattended is not in this version. Reports stay local files.
 
+## A real run
+
+Everything above the line was first shown with stub workers, so here is one real unit. On 2026-10-26, on a fictional instance (a "garden" project, set up through the guided setup), the row "Write seed-checklist.md: a checklist of five steps for sorting seed packets by sowing month, each step one short sentence" was run with `python -m orgcore run` on a Claude Enterprise sign-in. No API key, no money.
+
+![One real unit](docs/images/real-run.png)
+
+- **What it produced:** `seed-checklist.md`, five numbered steps, one short sentence each (`docs/real-run/seed-checklist.md`).
+- **What the reviewer said:** `pass`, from a separate session with its own identity. It checked the five steps and the one-sentence rule against the row, found no credential, spending or outside claim, and left one small follow-up (step 5, storing the packets, comes after the sort is finished). A trivial task, so there was nothing for the reviewer to catch; an example where it sends work back is the offline rehearsal below.
+- **How much allowance it used:** the whole unit, executor and reviewer, took about 20 seconds, and the 5-hour window read 1% used before and 1% after. The status data reports whole percent points, so the run is recorded as "0 points, measured"; the cost is somewhere under one point. Larger tasks will show a larger figure.
+- **Files:** `docs/real-run/` has the board before and after, the command output and the produced file; `tools/make_screenshots.py` draws the picture from them.
+
+This is one small task, not evidence about quality on real work.
+
 ## What is different
 
 Every item below is implemented and has tests; the file names point at the code, the tests and, where there is one, the format description.
 
 **Setup is a conversation, not a form.** `python bootstrap.py` checks the machine, asks for consent, and opens the official Claude Code CLI with the coordinator's setup prompt. The coordinator asks one question at a time and saves every validated answer as a file, so setup can stop and continue at any time and never depends on a chat history. Files: `bootstrap.py`, `orgcore/setup.py`, `prompts/setup-coordinator.md`, `docs/guided-setup.md`; tests: `tests/test_setup.py`, `tests/test_bootstrap.py`.
-
-![Guided setup stopped half way](docs/images/setup-status.png)
 
 **The task board is a text file.** One Markdown file in which every task is a row tagged with its state (`todo`, `running`, `review`, `rework`, `done`, `blocked`), readable and editable by people and agents alike. Cross-process locks and atomic writes keep concurrent updates safe; a worker that dies leaves a row that is put back only when its claim lock is really gone. Files: `orgcore/backlog.py`, `orgcore/fsio.py`, `docs/backlog-format.md`; tests: `tests/test_backlog.py`, `tests/test_workflow.py`.
 
@@ -58,7 +69,7 @@ Setup ends with a `Next step:` line (`python -m orgcore setup <instance> status`
 python -m unittest
 ```
 
-Run from the repository root, on Windows (`py -3.12 -m unittest`) or Linux.
+Run from the repository root, with whichever `python` has Python 3.11 or newer, on Windows or Linux.
 
 ## Try the demo
 
@@ -105,6 +116,24 @@ Real execution is off until you turn it on, for one project and one task at a ti
    ```
 
    It takes the consented row through an executor session, then a separate reviewer session (different prompt, different session id, different identity), and then records how much of your usage window the unit consumed. If any check fails it lists the reasons and starts nothing. One command, one executor round and one review; a row sent back for rework is run again by the next command.
+
+## FAQ
+
+Sources are Anthropic's own public support pages, read on 2026-10-26. Terms can change; check the pages, not this list.
+
+**Whose usage does it spend?** Yours, from your own Claude plan. Sessions started with `claude -p` while signed in with a plan count against the same 5-hour and weekly limits as your own Claude Code and chat use ([Use Claude Code with your Pro or Max plan](https://support.claude.com/en/articles/11145838-use-claude-code-with-your-pro-or-max-plan): "all activity in both tools counts against the same limits"). That is why the dispatch gate keeps your reserve and a maximum share per window.
+
+**Is running headless sessions on a subscription allowed?** Anthropic's page on the Agent SDK says that, for now, "Claude Agent SDK, `claude -p`, and third-party app usage still draw from your subscription limits", and notes that Max and Team plans also include monthly API credits that cover `claude -p` ([Use the Claude Agent SDK with your Claude plan](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)). That page is about limits and billing, and it has changed more than once this year. It is not a legal opinion on your plan's terms of service: read the terms for your plan before you enable real workers, and use this project only on your own account.
+
+**Can it cost me money anyway?** Not through this project: it never uses an API key and refuses an API-key sign-in. But your account may have usage credits (pay-as-you-go beyond the plan limit) switched on, and the CLI keeps working past the limit if so. Turn them off yourself under Settings > Usage ([Manage usage credits](https://support.claude.com/en/articles/12429409-manage-usage-credits-for-paid-claude-plans): "you can disable usage credits at any time through Settings > Usage"). The gate closes at your chosen share long before the limit, but it cannot see that setting, so this one is yours to check.
+
+**What if the CLI changes its status format?** Usage is read from the status data the official CLI hands to the hook (`orgcore/statusline.py`). A reading that cannot be parsed, is missing a window, is stale, or has already reset is treated as unknown, and unknown closes the gate: nothing starts until a valid reading arrives. The parser is tested against a real capture from CLI 2.1.310 (`tests/fixtures/statusline-real-2.1.310.json`). A format change therefore stops work; it does not make it spend blindly. Fixing the parser is the repair.
+
+**Why do I need an interactive session open?** Headless sessions emit no readings. One idle interactive session running the status-line hook (see "Enable real workers") is the only source the gate trusts.
+
+## Naming
+
+The project name is "You need a premier" (中文: 你需要一个总理). The Python package and its entry point are still called `orgcore` (`python -m orgcore`); renaming them is a separate change. On 2026-10-26 the PyPI names `you-need-a-premier` and `youneedapremier` and GitHub repository names matching either were not taken (read-only lookups of public pages).
 
 ## Layout
 

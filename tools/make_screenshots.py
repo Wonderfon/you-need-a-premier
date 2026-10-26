@@ -175,25 +175,21 @@ def main(out_dir: Path) -> None:
             "Fictional readings. The gate names the window and the cause; an unknown or stale reading closes it too."),
             encoding="utf-8")
 
-        # the guided setup, stopped half way: the checkpoint is a file, not a chat
-        run(work, "setup", "my-org", "start")
-        answers = {"identity": {"organization_name": "Maple Studio", "owner_name": "Sam Rivera", "instance_id": "maple-studio"},
-                   "goal": {"goal": "Publish one small board game and keep a tidy household budget."},
-                   "lines": {"lines": [{"id": "games", "name": "Board Game"}, {"id": "home", "name": "Household"}]}}
-        saved = []
-        for block, answer in answers.items():
-            (work / f"{block}.json").write_text(json.dumps(answer), encoding="utf-8")
-            saved.append(run(work, "setup", "my-org", "save", block, "--file", f"{block}.json"))
-        (out_dir / "setup-status.svg").write_text(terminal(
-            "guided setup: stop any time, continue from the saved files", [
-                ("python -m orgcore setup my-org save lines --file lines.json", saved[-1]),
-                ("python -m orgcore setup my-org status", run(work, "setup", "my-org", "status"))],
-            "The coordinator asks one question at a time in the Claude Code CLI and saves each answer through this command."),
+        # one real run, captured on 2026-10-26 and kept as plain files in docs/real-run (fictional garden task)
+        real = ROOT / "docs" / "real-run"
+        read = lambda name: (real / name).read_text(encoding="utf-8").rstrip("\n")  # noqa: E731
+        (out_dir / "real-run.svg").write_text(terminal(
+            "one real unit: Claude executor, then a separate Claude reviewer", [
+                ("cat projects/backlog.md", read("board-before.md")),
+                ("python -m orgcore run my-org", read("run-output.txt")),
+                ("cat projects/backlog.md", read("board-after.md")),
+                ("cat work/garden/seed-checklist.md", read("seed-checklist.md"))],
+            "A real run on a fictional garden task (docs/real-run). Two real Claude sessions; the usage figure is whole percent points."),
             encoding="utf-8")
     finally:
         shutil.rmtree(work, ignore_errors=True)
     (out_dir / "pace-line.svg").write_text(pace_chart(), encoding="utf-8")
-    for name in ("pace-line", "usage-gate", "rehearsal", "setup-status"):
+    for name in ("pace-line", "usage-gate", "rehearsal", "real-run"):
         print(out_dir / f"{name}.svg")
 
 
