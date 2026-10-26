@@ -94,6 +94,13 @@ class CheckPrivate(unittest.TestCase):
         self.assertIn("file name", out)
         self.assertIn("commit metadata", out)
 
+    def test_a_long_number_rule_hits_ids_but_not_the_digits_of_a_decimal(self):
+        rule = self.dir / "digits.txt"
+        rule.write_text(check_private.LONG_NUMBER + "\n", encoding="utf-8")
+        terms = check_private.load_terms(rule)
+        self.assertTrue(check_private.hit(terms, "id " + "7" * 19 + " here"))
+        for text in ("total_cost_usd: 0.1234567890123456789", "pi = 3.14159265358979323846", "1234567890"):
+            self.assertFalse(check_private.hit(terms, text), text)
     def test_setup_errors_exit_2(self):
         self.assertEqual(run_check(self.dir / "missing.txt", self.repo)[0], 2)
         (self.dir / "empty.txt").write_text("# only a comment\n", encoding="utf-8")

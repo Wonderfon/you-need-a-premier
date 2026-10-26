@@ -8,10 +8,9 @@
 2. **Menu.** `1` start or resume the guided setup, `2` run the offline rehearsal, `3` exit.
 3. **Consent.** Option 1 prints what will happen (the CLI opens, your subscription sign-in is used, answers are saved as files, nothing is sent, no credential is requested). Only `yes` continues.
 4. **Subscription check.** The script runs `claude auth status --json` and keeps two facts: signed in, and which method. It passes only for a subscription login (`claude.ai` or `oauth_token`) and only if `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, the Bedrock/Vertex/Foundry switches and an `apiKeyHelper` (user or project settings) are all absent. It does not use the plan name. Nothing else from the status output (account, organization) is stored or printed. On failure it says what to fix; it does not sign you in.
-5. **Launch.** The CLI starts in the instance directory with `--append-system-prompt-file` (the English coordinator prompt, filled in with the instance path), `--add-dir`, and permission only for the setup writer command. The coordinator asks one question at a time.
+5. **Launch.** The CLI starts in the instance directory with `--append-system-prompt-file` (the English coordinator prompt, filled in with the instance path), `--add-dir`, the tools `Read` and `Write` only (no shell) and two hooks. The coordinator asks one question at a time.
 
-The launch pre-approves one thing: the `Bash` tool running `python -m orgcore setup ...`. On Windows the CLI may run commands through its `PowerShell` tool instead, and no narrower allow rule for that tool was found that works (tried five forms), so there the CLI can ask you to approve each setup command and each answer file it writes. Approve only commands that start with `python -m orgcore setup`; answers it saves as `answer-<block>.json` in the instance folder can be deleted afterwards. The saved copies live in `state/answers/`.
-
+The session cannot run commands. It saves an answer by writing one JSON file, `state/inbox/<block>.json` (`<block>.change.json` to replace a saved answer). Windows has no working "Write, but only here" allow rule (tried five forms; only a bare `Write` matched), so two hooks do it: a `PreToolUse` hook (`setup_hook.py <instance> guard`) allows exactly `*.json` files directly in `state/inbox/` and refuses every other write, and a `PostToolUse` hook (`setup_hook.py <instance>`) validates and saves the file, deletes it, and hands the result, the status and the next question back to the model. Writing `confirm.json` also composes the files. Checked on CLI 2.1.310 with no user or project settings (`--setting-sources ''`): no approval prompt, a write outside the inbox refused. Not run by hand in an interactive window with a person clicking.
 ## Where answers go
 
 ```
@@ -20,9 +19,9 @@ The launch pre-approves one thing: the `Bash` tool running `python -m orgcore se
 <instance>/state/answers/history/      answers you changed, kept
 ```
 
-The coordinator saves through `python -m orgcore setup <instance> save <block> --json '{...}'`. Every answer is validated first; a bad answer changes nothing. A saved answer is never replaced unless you were asked and `--change` is given. If an answer file is edited by hand, the block returns to `needs_action` instead of being trusted. A change to `lines` or `projects` sends the blocks that depend on it back for another look.
+The coordinator saves through the inbox files above; by hand, use `python -m orgcore setup <instance> save <block> --json '{...}'`. Every answer is validated first; a bad answer changes nothing. A saved answer is never replaced unless you were asked and `--change` is given. If an answer file is edited by hand, the block returns to `needs_action` instead of being trusted. A change to `lines` or `projects` sends the blocks that depend on it back for another look.
 
-Resuming reads these files, never a chat history: run `bootstrap.py` again and the coordinator starts from `status`.
+Resuming reads these files, never a chat history: run `bootstrap.py` again and the coordinator starts from the setup state printed at the end of its prompt.
 
 A successful `save` is already an accepted answer: the checkpoint is written in the same call. `accept` exists only to finish a save that was interrupted in between; you never need it in a normal run.
 
@@ -40,11 +39,11 @@ The exact examples the coordinator follows are in `prompts/setup-coordinator.md`
 | `time` | `{"timezone": "UTC"}` |
 | `reporting` | `{"report_times": ["09:00"], "quiet_hours": {"start": "23:00", "end": "08:00"}, "preferred": "local"}` |
 | `spending` | `{"currency": "USD", "period": "month", "cap": 0}` |
-| `subscription` | `{"windows": [{"name": "5-hour", "reserve_percent": 20, "max_share_percent": 50, "max_observation_age_minutes": 30}], "max_concurrency": 1}` |
+| `subscription` | `{"windows": [{"name": "5-hour", "reserve_percent": 20, "max_share_percent": 50, "max_observation_age_minutes": 30}], "max_concurrency": 1}`; once the account has reported usage, a window it never reports (for example 7-day on an enterprise plan, which reports only 5-hour) is refused, because it would keep the gate closed forever |
 | `rules` | `{"text": "..."}` |
 | `confirm` | `{"confirmed": true}` after every other block is accepted |
 
-On Windows PowerShell 5 a `--json '{...}'` argument loses its double quotes; use `--file answer.json` or `--json -` with the text piped in. PowerShell 7 and bash take the single-quoted form as written.
+On Windows PowerShell 5 a `--json '{...}'` argument loses its double quotes; use `--file answer.json` or `--json -` with the text piped in (a `--file` under `<instance>/state/tmp/` is deleted after it saved; any other file is left alone). PowerShell 7 and bash take the single-quoted form as written.
 
 After the last block, `python -m orgcore setup <instance> status` ends with a `Next step:` line naming the command to run next.
 
@@ -57,8 +56,10 @@ The `time` block checks that the time zone can be resolved on this machine. If i
 ## Setup commands
 
 ```
-python -m orgcore setup <instance> start|status|show [block]|save <block> (--json TEXT | --json - | --file PATH) [--change]|accept <block>|compose
+python -m orgcore setup <instance> start|status|show [block]|save <block> (--json TEXT | --json - | --file PATH) [--change]|accept <block>|compose|ingest|guard
 ```
+
+`ingest` saves the files waiting in `state/inbox/` (what the hook runs); `guard` reads a tool call on standard input and prints the hook decision.
 
 `accept` finishes a save that was interrupted after the answer was written but before the checkpoint.
 

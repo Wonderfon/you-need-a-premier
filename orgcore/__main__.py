@@ -40,6 +40,11 @@ def _setup_command(args) -> int:
             print("\n".join(guided.describe(root)))
         elif args.action == "show":
             print(guided.show(root, args.block))
+        elif args.action == "guard":
+            print(json.dumps(guided.guard(root, sys.stdin.read())))
+        elif args.action == "ingest":
+            text = "\n".join(guided.ingest(root))
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": text}}) if args.hook else text)
         elif args.action == "compose":
             written = guided.compose(root)
             print("Wrote: " + ", ".join(written) if written else "Nothing to write: every file already matches the saved answers.")
@@ -62,6 +67,8 @@ def _setup_command(args) -> int:
                 except json.JSONDecodeError as exc:
                     raise guided.SetupError([f"the answer is not valid JSON: {exc.msg} (line {exc.lineno}, column {exc.colno})"])
                 print(guided.save(root, args.block, answer, change=args.change))
+                if args.file:
+                    guided.discard_tmp(root, Path(args.file))
     except guided.SetupError as exc:
         print("FAIL", *exc.errors, sep="\n", file=sys.stderr)
         return 1
@@ -104,10 +111,11 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("usage-capture").add_argument("instance", help="instance directory")
     setup = sub.add_parser("setup")
     setup.add_argument("instance", help="instance directory")
-    setup.add_argument("action", choices=["start", "status", "show", "save", "accept", "compose"])
+    setup.add_argument("action", choices=["start", "status", "show", "save", "accept", "compose", "ingest", "guard"])
     setup.add_argument("block", nargs="?", help="block name for show, save and accept")
     setup.add_argument("--json", help="the answer as one JSON object; '-' reads it from standard input")
     setup.add_argument("--file", help="read the answer from this JSON file")
+    setup.add_argument("--hook", action="store_true", help="ingest: print the result the way a CLI hook hands it to the model")
     setup.add_argument("--change", action="store_true", help="replace an answer that is already saved (ask the user first)")
     args = parser.parse_args(argv)
     if args.command == "setup":

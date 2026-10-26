@@ -24,7 +24,7 @@ from orgcore import setup as guided  # noqa: E402
 
 PROMPT = HERE / "prompts" / "setup-coordinator.md"
 DEMO = HERE / "examples" / "demo"
-FIRST_MESSAGE = "Begin the guided setup. Run the status action first, then continue with the next question."
+FIRST_MESSAGE = "Begin the guided setup. Read the setup state at the end of your instructions, then continue with the next question."
 CONSENT = """\
 Before we start, this is what will happen:
   - The official Claude Code command-line tool opens and the coordinator interviews you, one question at a time.
@@ -41,18 +41,24 @@ def render_prompt(root: Path) -> Path:
     text = PROMPT.read_text(encoding="utf-8").replace("{{INSTANCE}}", str(root)).replace("{{ORGCORE}}", command)
     target = root / "state" / "setup-coordinator.md"
     target.parent.mkdir(parents=True, exist_ok=True)
+    (root / "state" / "inbox").mkdir(exist_ok=True)
+    if guided.load_state(root):
+        text += "\n## Setup state when this session started\n\n" + "\n".join(guided.describe(root)) + "\n"
     target.write_text(text, encoding="utf-8")
     return target
 
 
 def launch_command(claude: list[str], prompt: Path, root: Path) -> list[str]:
-    allowed = f'Bash("{sys.executable}" -m orgcore setup:*)'
-    # the first message comes before the options: --allowedTools takes a list and would swallow a trailing argument
+    """The session gets two tools, Read and Write, and no shell. Windows cannot express "Write, but only here" as an allow
+    rule, so a PreToolUse hook allows exactly the answer files in state/inbox/ and a PostToolUse hook saves them."""
+    hook = lambda *extra: [{"matcher": "Write", "hooks": [{"type": "command", "command":  # noqa: E731
+                                                       statusline.hook_command(sys.executable, root, "setup_hook.py") + "".join(f" {e}" for e in extra)}]}]
     # the status line is how an interactive session hands its usage windows to state/usage.json
-    status_line = {"statusLine": {"type": "command", "command": statusline.hook_command(sys.executable, root)}}
+    settings = {"statusLine": {"type": "command", "command": statusline.hook_command(sys.executable, root)},
+                "hooks": {"PreToolUse": hook("guard"), "PostToolUse": hook()}}
+    # the first message comes before the options: --tools takes a list and would swallow a trailing argument
     return [*claude, FIRST_MESSAGE, "--append-system-prompt-file", str(prompt), "--add-dir", str(root),
-            "--settings", json.dumps(status_line), "--allowedTools", allowed]
-
+            "--settings", json.dumps(settings), "--tools", "Read,Write"]
 
 def local_checks(out, claude: list[str] | None, run) -> None:
     out(f"  Python {sys.version_info.major}.{sys.version_info.minor}: " + ("ok" if doctor.python_ok() else

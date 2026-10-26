@@ -16,7 +16,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from .fsio import atomic_write, file_lock
+from .fsio import atomic_write, file_lock, read_text
 
 SCHEMA_VERSION = 1
 INSTANCE_ENV = "ORGCORE_INSTANCE"
@@ -230,7 +230,7 @@ def resolve_instance(explicit: str | os.PathLike | None = None, environ=os.envir
 
 def _load_json(path: Path, name: str):
     try:
-        text = path.read_text(encoding="utf-8")
+        text = read_text(path)
     except FileNotFoundError:
         raise ConfigError([f"{name}: file not found at {path}"]) from None
     try:

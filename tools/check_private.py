@@ -4,7 +4,7 @@
 
 Credential shapes (API keys, tokens, private keys, key=value secrets) are always checked too, in every reachable commit.
 Ban list: one term per line; '#' starts a comment; a plain term is a case-insensitive substring;
-'re:<pattern>' is a regular expression. Hits are reported as location only (file and line, or commit and file),
+'re:<pattern>' is a regular expression (see LONG_NUMBER for a ready-made line for long ids). Hits are reported as location only (file and line, or commit and file),
 never the matched text, so the report itself is safe to paste. Exit code: 0 clean, 1 hits, 2 usage or setup error.
 Git is taken from $ORGCORE_GIT or PATH.
 """
@@ -18,6 +18,8 @@ import sys
 from pathlib import Path
 
 SKIP_DIRS = {".git", "__pycache__", ".venv"}
+# A ban-list line for 17-20 digit numbers (account or message ids) that leaves the digits of a decimal alone.
+LONG_NUMBER = r"re:(?<![\d.])\d{17,20}(?!\d)"
 
 # Shapes of common credentials, always checked next to the ban list (reported by location only, like every hit).
 SECRET_PATTERNS = [re.compile(p) for p in (

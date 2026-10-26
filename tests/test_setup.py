@@ -1,10 +1,13 @@
 import json
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
+from datetime import timedelta
 from pathlib import Path
 
-from orgcore import check, config
+from orgcore import check, config, statusline, usage
 from orgcore import setup as guided
 from orgcore.config import SETUP_BLOCKS
 
@@ -74,6 +77,109 @@ class PaceLine(SetupCase):
         self.fill(upto="subscription")
         self.assertIn("go together", self.errors("subscription", self.paced(length_hours=5)))
 
+
+class OnlyReportedWindows(SetupCase):
+    def five_hour_only(self):
+        now = usage.now_utc()
+        stamp = int((now + timedelta(hours=3)).timestamp())
+        statusline.capture(self.root, json.dumps({"version": "9.9.9", "rate_limits": {"five_hour": {"used_percentage": 3, "resets_at": stamp}}}), now)
+
+    def test_a_window_the_account_never_reports_is_refused_once_readings_exist(self):
+        self.fill(upto="subscription")
+        both = {**ANSWERS[8][1], "windows": [ANSWERS[8][1]["windows"][0],
+                                             {**ANSWERS[8][1]["windows"][0], "name": "7-day"}]}
+        guided.save(self.root, "subscription", both)  # no readings yet: nothing to compare with
+        self.five_hour_only()
+        found = self.errors("subscription", both, change=True)
+        self.assertIn("'7-day' is not reported by this account (it reports: five_hour)", found)
+        self.assertNotIn("'5-hour' is not reported", found)
+
+    def test_the_reported_window_alone_is_saved(self):
+        self.fill(upto="subscription")
+        self.five_hour_only()
+        self.assertEqual(guided.save(self.root, "subscription", ANSWERS[8][1]), "subscription: saved")
+
+class Inbox(SetupCase):
+    def drop(self, name, text):
+        path = self.root / "state" / "inbox" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text if isinstance(text, str) else json.dumps(text), encoding="utf-8")
+        return path
+
+    def test_ingest_saves_each_waiting_file_removes_it_and_ends_with_the_status(self):
+        first = self.drop("identity.json", ANSWERS[0][1])
+        out = "\n".join(guided.ingest(self.root))
+        self.assertIn("identity: saved", out)
+        self.assertIn("Next question: goal", out)
+        self.assertFalse(first.exists())
+        self.assertEqual(self.status("identity"), "accepted")
+
+    def test_a_bad_file_is_reported_removed_and_saves_nothing(self):
+        bad = self.drop("identity.json", "{nope")
+        invalid = self.drop("goal.json", {"unknown": 1})
+        out = "\n".join(guided.ingest(self.root))
+        self.assertIn("FAIL identity: the answer is not valid JSON", out)
+        self.assertIn("FAIL goal:", out)
+        self.assertFalse(bad.exists() or invalid.exists())
+        self.assertEqual((self.status("identity"), self.status("goal")), ("pending", "pending"))
+
+    def test_a_saved_block_is_replaced_only_through_a_change_file(self):
+        guided.save(self.root, *ANSWERS[0])
+        other = {**ANSWERS[0][1], "organization_name": "Other"}
+        self.drop("identity.json", other)
+        self.assertIn("FAIL identity: identity is already saved", "\n".join(guided.ingest(self.root)))
+        self.drop("identity.change.json", other)
+        self.assertIn("identity: saved", "\n".join(guided.ingest(self.root)))
+        self.assertEqual(json.loads(guided.show(self.root, "identity"))["identity"]["organization_name"], "Other")
+
+    def test_confirm_composes_the_files(self):
+        self.fill(upto="confirm")
+        self.drop("confirm.json", {"confirmed": True})
+        self.assertIn("Wrote: org.json", "\n".join(guided.ingest(self.root)))
+        self.assertTrue((self.root / "org.json").exists())
+
+    def test_the_guard_allows_only_json_files_directly_in_the_inbox(self):
+        def decision(path):
+            hook = guided.guard(self.root, json.dumps({"tool_input": {"file_path": str(path)}}))
+            return hook["hookSpecificOutput"]["permissionDecision"]
+        inbox = self.root / "state" / "inbox"
+        self.assertEqual(decision(inbox / "goal.json"), "allow")
+        for refused in (inbox / "goal.txt", inbox / "sub" / "goal.json", inbox / ".." / "answers" / "goal.json",
+                        self.root / "policy.json", self.tmp / "elsewhere.json"):
+            self.assertEqual(decision(refused), "deny", refused)
+        self.assertEqual(guided.guard(self.root, "not json")["hookSpecificOutput"]["permissionDecision"], "deny")
+
+    def test_the_hook_script_runs_from_any_folder(self):
+        hook = Path(__file__).resolve().parent.parent / "setup_hook.py"
+        payload = json.dumps({"tool_input": {"file_path": str(self.root / "state" / "inbox" / "goal.json")}})
+        done = subprocess.run([sys.executable, str(hook), str(self.root), "guard"], input=payload, cwd=self.tmp,
+                              capture_output=True, text=True)
+        self.assertEqual(json.loads(done.stdout)["hookSpecificOutput"]["permissionDecision"], "allow", done.stderr)
+        self.drop("goal.json", ANSWERS[1][1])
+        guided.save(self.root, *ANSWERS[0])
+        done = subprocess.run([sys.executable, str(hook), str(self.root)], cwd=self.tmp, capture_output=True, text=True)
+        self.assertIn("goal: saved", json.loads(done.stdout)["hookSpecificOutput"]["additionalContext"], done.stderr)
+
+
+class TempAnswerFiles(SetupCase):
+    def test_a_file_under_state_tmp_is_deleted_after_a_successful_save_and_others_are_kept(self):
+        tmp = self.root / "state" / "tmp"
+        tmp.mkdir(parents=True)
+        mine, theirs = tmp / "answer.json", self.tmp / "keep.json"
+        for path in (mine, theirs):
+            path.write_text(json.dumps(ANSWERS[0][1]), encoding="utf-8")
+        self.assertEqual(run_cli("setup", self.root, "save", "identity", "--file", str(mine)).returncode, 0)
+        self.assertFalse(mine.exists())
+        self.assertEqual(run_cli("setup", self.root, "save", "identity", "--file", str(theirs), "--change").returncode, 0)
+        self.assertTrue(theirs.exists())
+
+    def test_a_failed_save_keeps_the_file_so_it_can_be_fixed(self):
+        tmp = self.root / "state" / "tmp"
+        tmp.mkdir(parents=True)
+        bad = tmp / "answer.json"
+        bad.write_text(json.dumps({"organization_name": "x"}), encoding="utf-8")
+        self.assertEqual(run_cli("setup", self.root, "save", "identity", "--file", str(bad)).returncode, 1)
+        self.assertTrue(bad.exists())
 
 class Checkpoint(SetupCase):
     def test_start_is_idempotent_and_asks_identity_first(self):

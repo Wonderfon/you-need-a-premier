@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Protocol
 
 from .backlog import format_time, parse_time
+from .fsio import read_text
 
 
 class UsageUnavailable(Exception):
@@ -84,7 +85,7 @@ class JsonFileUsage:
 
     def observe(self) -> list[Observation]:
         try:
-            raw = json.loads(self.path.read_text(encoding="utf-8"))
+            raw = json.loads(read_text(self.path))
             return [Observation(o["window"], float(o["used_percent"]), parse_time(o["observed_at"]),
                                 parse_time(o["resets_at"]), o["source"], bool(o.get("synthetic", False)))
                     for o in raw["observations"]]

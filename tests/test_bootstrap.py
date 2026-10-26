@@ -67,10 +67,14 @@ class Launch(BootstrapCase):
         argv = launch["argv"]
         self.assertEqual(argv[0], bootstrap.FIRST_MESSAGE)
         self.assertEqual(argv[argv.index("--add-dir") + 1], str(self.inst.resolve()))
-        self.assertEqual(argv[-2], "--allowedTools")  # last, so it cannot swallow a trailing argument
-        self.assertIn("-m orgcore setup:*", argv[-1])
+        self.assertEqual(argv[-2:], ["--tools", "Read,Write"])  # no shell; last, so it cannot swallow a trailing argument
+        self.assertNotIn("--allowedTools", argv)
         self.assertNotIn("--bare", argv)
-        status_line = json.loads(argv[argv.index("--settings") + 1])["statusLine"]
+        settings = json.loads(argv[argv.index("--settings") + 1])
+        status_line = settings["statusLine"]
+        hooks = {event: entries[0]["hooks"][0]["command"] for event, entries in settings["hooks"].items()}
+        self.assertEqual(hooks["PostToolUse"], statusline.hook_command(sys.executable, self.inst.resolve(), "setup_hook.py"))
+        self.assertEqual(hooks["PreToolUse"], hooks["PostToolUse"] + " guard")
         self.assertEqual(status_line["type"], "command")
         self.assertEqual(status_line["command"], statusline.hook_command(sys.executable, self.inst.resolve()))
         self.assertFalse(launch["prompt_has_placeholder"])

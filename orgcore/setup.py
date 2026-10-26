@@ -17,9 +17,9 @@ import json
 import re
 from pathlib import Path
 
-from . import check, config, report
+from . import check, config, report, usage
 from .config import SETUP_BLOCKS, SLUG, block_hash
-from .fsio import atomic_write, file_lock
+from .fsio import atomic_write, file_lock, read_text
 
 AUTH_METHODS = ("claude.ai", "oauth_token")
 DELIVERY = ("local", "discord", "email")
@@ -38,7 +38,7 @@ def _answer_path(root: Path, block: str) -> Path:
 
 def _read_answer(root: Path, block: str):
     try:
-        return json.loads(_answer_path(root, block).read_text(encoding="utf-8"))
+        return json.loads(read_text(_answer_path(root, block)))
     except (FileNotFoundError, json.JSONDecodeError):
         return None
 
@@ -58,7 +58,7 @@ def load_state(root: Path) -> dict | None:
     if not path.exists():
         return None
     try:
-        state = json.loads(path.read_text(encoding="utf-8"))
+        state = json.loads(read_text(path))
         config.validate("state/setup.json", state)
     except (json.JSONDecodeError, config.ConfigError) as exc:
         errors = exc.errors if isinstance(exc, config.ConfigError) else [f"state/setup.json: not valid JSON: {exc.msg}"]
@@ -282,6 +282,17 @@ def _require(root: Path) -> dict:
     return state
 
 
+def _unreported_windows(root: Path, answer) -> list[str]:
+    """Once the account has reported usage (the setup session runs the status-line hook), a window it never reports
+    would keep the dispatch gate closed forever (an enterprise plan reports only the 5-hour window)."""
+    try:
+        seen = {usage.canonical(o.window) for o in usage.JsonFileUsage(usage.usage_path(root)).observe() if not o.synthetic}
+    except usage.UsageUnavailable:
+        return []
+    return [f"windows[{n}]: '{w['name']}' is not reported by this account (it reports: {', '.join(sorted(seen)) or 'nothing'}); "
+            f"a window that is never reported keeps the gate closed, so list only reported windows"
+            for n, w in enumerate(answer["windows"]) if usage.canonical(w["name"]) not in seen] if seen else []
+
 def save(root: Path, block: str, answer, change: bool = False) -> str:
     """Validate and save one block. Returns a one-line description of what happened."""
     state = _require(root)
@@ -293,7 +304,7 @@ def save(root: Path, block: str, answer, change: bool = False) -> str:
         raise SetupError([f"{block} is already saved and is kept. If the user wants to change it, ask them first, "
                           f"then save again with --change"])
     others = {b: a for b, a in _accepted_answers(root, state).items() if b != block}
-    errors = validate_block(block, answer, others)
+    errors = validate_block(block, answer, others) or (_unreported_windows(root, answer) if block == "subscription" else [])
     if errors:
         if block == "time" and any("cannot be resolved" in e for e in errors):
             state["blocks"]["time"] = {"status": "needs_action", "hash": None}
@@ -311,6 +322,51 @@ def save(root: Path, block: str, answer, change: bool = False) -> str:
     after = _sync(root, state)
     stale = [b for b in after if b != block]
     return f"{block}: saved" + (f"; these later blocks no longer hold and need attention: {', '.join(stale)}" if stale else "")
+
+
+def ingest(root: Path) -> list[str]:
+    """Save every answer file waiting in state/inbox/ (`<block>.json`, or `<block>.change.json` to replace a saved one),
+    delete each file whether it saved or not, and finish with the setup status. This is how a session that may only
+    write files (no shell) hands answers to the writer: a hook runs this after each file it writes."""
+    out = []
+    inbox = root / "state" / "inbox"
+    for path in sorted(inbox.glob("*.json")) if inbox.is_dir() else []:
+        block, change = path.stem.removesuffix(".change"), path.stem.endswith(".change")
+        try:
+            out.append(save(root, block, json.loads(read_text(path)), change=change))
+            if block == "confirm":
+                try:
+                    written = compose(root)
+                    out.append("Wrote: " + ", ".join(written) if written else "Nothing to write: every file already matches the saved answers.")
+                except SetupError as exc:
+                    out.append("FAIL compose: " + " | ".join(exc.errors))
+        except json.JSONDecodeError as exc:
+            out.append(f"FAIL {block}: the answer is not valid JSON: {exc.msg} (line {exc.lineno}, column {exc.colno}). Nothing was saved.")
+        except SetupError as exc:
+            out.append(f"FAIL {block}: " + " | ".join(exc.errors) + " Nothing was saved.")
+        finally:
+            path.unlink(missing_ok=True)
+    return out + describe(root)
+
+
+def guard(root: Path, hook_input: str) -> dict:
+    """PreToolUse decision for the setup session: it may write `*.json` files directly inside state/inbox/ and nothing
+    else. (The CLI cannot express "Write, but only here" as an allow rule on Windows, so the hook decides.)"""
+    try:
+        target = Path(json.loads(hook_input)["tool_input"]["file_path"]).resolve()
+        ok = target.parent == (root / "state" / "inbox").resolve() and target.suffix == ".json"
+    except (ValueError, KeyError, TypeError, OSError):
+        ok = False
+    return {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow" if ok else "deny",
+                                   "permissionDecisionReason": "answer file in state/inbox" if ok else
+                                   f"this session may only write *.json answer files directly in {root / 'state' / 'inbox'}"}}
+
+
+def discard_tmp(root: Path, path: Path) -> None:
+    """A saved answer file the coordinator wrote under state/tmp/ has done its job; files anywhere else are never touched."""
+    tmp = (root / "state" / "tmp").resolve()
+    if path.resolve().parent == tmp:
+        path.unlink(missing_ok=True)
 
 
 def accept(root: Path, block: str) -> str:
@@ -397,7 +453,7 @@ def compose(root: Path) -> list[str]:
     for name, data in (("org.json", org), ("policy.json", policy), ("reporting.json", reporting)):
         path = root / name
         if path.exists():
-            existing = json.loads(path.read_text(encoding="utf-8"))
+            existing = json.loads(read_text(path))
             if name == "policy.json" and isinstance(existing, dict):  # the consent is written later, by enable-live
                 existing = {**existing, "live_enabled": data["live_enabled"], "live_consent": data["live_consent"]}
             if existing != data:

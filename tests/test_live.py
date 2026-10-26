@@ -134,6 +134,23 @@ class Runs(LiveCase):
         self.assertEqual(guided.load_state(self.root)["phase"], "live_ready")
         self.assertIn("usage consumed", "\n".join(lines))
 
+    def test_every_stage_takes_a_fresh_clock_so_a_reading_made_during_the_executor_is_not_from_the_future(self):
+        self.consent()
+        self.reading()
+        base = usage.now_utc()
+        calls = iter(range(100))
+        work = adapter.ClaudeExecutor.work
+
+        def work_then_a_new_reading(executor, *args, **kw):
+            result = work(executor, *args, **kw)
+            statusline.capture(self.root, payload(10, 10, base + timedelta(minutes=2)), base + timedelta(minutes=2))
+            return result
+
+        with mock.patch.object(adapter.ClaudeExecutor, "work", work_then_a_new_reading), \
+                mock.patch.object(usage, "now_utc", lambda: base + timedelta(minutes=5 * next(calls))):
+            lines = self.run_unit()
+        self.assertEqual(self.state_of(), "done")
+        self.assertIn("review -> done", "\n".join(lines))
     def test_the_other_demo_rows_are_not_touched(self):
         self.consent()
         self.reading()

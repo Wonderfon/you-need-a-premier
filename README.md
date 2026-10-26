@@ -12,7 +12,7 @@ Status: v0.1 in progress. Real work runs one unit at a time on your command (`py
 
 ## A real run
 
-Everything above the line was first shown with stub workers, so here is one real unit. On 2026-10-26, on a fictional instance (a "garden" project, set up through the guided setup), the row "Write seed-checklist.md: a checklist of five steps for sorting seed packets by sowing month, each step one short sentence" was run with `python -m orgcore run` on a Claude Enterprise sign-in. No API key, no money.
+Everything above the line was first shown with stub workers, so here is one real unit. On 2026-10-26, on a fictional instance (a "garden" project, set up through the guided setup), the row "Write seed-checklist.md: a checklist of five steps for sorting seed packets by sowing month, each step one short sentence" was run with `python -m orgcore run` on a Claude plan sign-in. No API key, no money.
 
 ![One real unit](docs/images/real-run.png)
 
@@ -148,7 +148,7 @@ The project name is "You need a premier" (中文: 你需要一个总理). The Py
 | `orgcore/adapter.py`, `statusline.py`, `prompts/executor.md`, `prompts/reviewer.md` | real CLI workers with their guards, usage readings from the CLI's status data, role templates (`docs/real-workers.md`) |
 | `orgcore/live.py` | the consent for real workers, the readiness check and the one-unit `run` command |
 | `orgcore/check.py` | one-pass validation of an instance |
-| `bootstrap.py`, `prompts/`, `orgcore/setup.py`, `doctor.py` | guided setup: entry point, coordinator prompt, answer writer, machine checks (`docs/guided-setup.md`) |
+| `bootstrap.py`, `setup_hook.py`, `prompts/`, `orgcore/setup.py`, `doctor.py` | guided setup: entry point, the setup session's two hooks, coordinator prompt, answer writer, machine checks (`docs/guided-setup.md`) |
 | `docs/` | file formats |
 | `examples/` | fictional demo instance |
 | `tools/check_private.py` | scan the tree and history against a private ban list kept outside the repo |

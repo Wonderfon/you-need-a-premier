@@ -16,7 +16,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable
 
-from .fsio import atomic_write, file_lock
+from .fsio import atomic_write, file_lock, read_text
 
 STATES = ("todo", "running", "review", "rework", "done", "blocked")
 TRANSITIONS = {
@@ -183,7 +183,7 @@ def _is_time(value: str | None) -> bool:
 
 def read(path: Path) -> Backlog:
     """Lock-free read: writers replace the file atomically, so a reader sees a whole old or new file."""
-    return Backlog(path.read_bytes().decode("utf-8"))
+    return Backlog(read_text(path))
 
 
 def update(path: Path, change: Callable[[Backlog], object]):

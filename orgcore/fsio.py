@@ -70,6 +70,18 @@ def held_elsewhere(target: Path) -> bool:
         os.close(fd)
 
 
+def read_text(path: Path) -> str:
+    """Read a file that `atomic_write` may be replacing. On Windows the open fails with PermissionError for the few
+    milliseconds of the swap (about 100 hits per reader were seen on a synced folder), so retry briefly."""
+    for attempt in range(40):
+        try:
+            return path.read_bytes().decode("utf-8")
+        except PermissionError:
+            if attempt == 39:
+                raise
+            time.sleep(0.05)
+
+
 def atomic_write(path: Path, data: bytes) -> None:
     """Write to a temp file in the same directory, fsync, then replace. A crash leaves the old or the new file, never half."""
     path.parent.mkdir(parents=True, exist_ok=True)
