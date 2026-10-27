@@ -1,0 +1,4 @@
+todo -> running: claude-executor-1 started attempt 1
+running -> review: claude-executor-1 submitted work\garden\seed-checklist.md
+review -> done: claude-reviewer-1 says pass
+usage consumed: 0 points of 5-hour
