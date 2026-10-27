@@ -155,3 +155,7 @@ The project name is "You need a premier" (中文: 你需要一个总理). The Py
 | `tools/make_screenshots.py`, `tools/svg_to_png.ps1`, `docs/images/` | regenerate the README images from the fictional demo (SVG sources and PNGs) |
 
 Your real instance directory lives outside this repository; see `docs/config.md`.
+
+## License
+
+MIT, see `LICENSE`.
