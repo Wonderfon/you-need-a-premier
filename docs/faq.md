@@ -1,0 +1,13 @@
+# FAQ
+
+Sources are Anthropic's own public support pages, read on 2026-10-26. Terms can change; check the pages, not this list.
+
+**Whose usage does it spend?** Yours, from your own Claude plan. Sessions started with `claude -p` while signed in with a plan count against the same 5-hour and weekly limits as your own Claude Code and chat use ([Use Claude Code with your Pro or Max plan](https://support.claude.com/en/articles/11145838-use-claude-code-with-your-pro-or-max-plan): "all activity in both tools counts against the same limits"). That is why the dispatch gate keeps your reserve and a maximum share per window.
+
+**Is running headless sessions on a subscription allowed?** Anthropic's page on the Agent SDK says that, for now, "Claude Agent SDK, `claude -p`, and third-party app usage still draw from your subscription limits", and notes that Max and Team plans also include monthly API credits that cover `claude -p` ([Use the Claude Agent SDK with your Claude plan](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)). That page is about limits and billing, and it has changed more than once this year. It is not a legal opinion on your plan's terms of service: read the terms for your plan before you enable real workers, and use this project only on your own account.
+
+**Can it cost me money anyway?** Not through this project: it never uses an API key and refuses an API-key sign-in. But your account may have usage credits (pay-as-you-go beyond the plan limit) switched on, and the CLI keeps working past the limit if so. Turn them off yourself under Settings > Usage ([Manage usage credits](https://support.claude.com/en/articles/12429409-manage-usage-credits-for-paid-claude-plans): "you can disable usage credits at any time through Settings > Usage"). The gate closes at your chosen share long before the limit, but it cannot see that setting, so this one is yours to check.
+
+**What if the CLI changes its status format?** Usage is read from the status data the official CLI hands to the hook (`orgcore/statusline.py`). A reading that cannot be parsed, is missing a window, is stale, or has already reset is treated as unknown, and unknown closes the gate: nothing starts until a valid reading arrives. The parser is tested against a real capture from CLI 2.1.310 (`tests/fixtures/statusline-real-2.1.310.json`). A format change therefore stops work; it does not make it spend blindly. Fixing the parser is the repair.
+
+**Why do I need an interactive session open?** Headless sessions emit no readings. One idle interactive session running the status-line hook (see "Enable real workers") is the only source the gate trusts.
