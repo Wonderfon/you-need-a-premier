@@ -13,6 +13,7 @@
 The session cannot run commands. It saves an answer by writing one JSON file, `state/inbox/<block>.json` (`<block>.change.json` to replace a saved answer). Windows has no working "Write, but only here" allow rule (tried five forms; only a bare `Write` matched), so two hooks do it: a `PreToolUse` hook (`setup_hook.py <instance> guard`) allows exactly `*.json` files directly in `state/inbox/` and refuses every other write, and a `PostToolUse` hook (`setup_hook.py <instance>`) validates and saves the file, deletes it, and hands the result, the status and the next question back to the model. Writing `confirm.json` also composes the files. Checked on CLI 2.1.310 with no user or project settings (`--setting-sources ''`): no approval prompt, a write outside the inbox refused. Then walked through in a real Windows terminal (ConPTY, CLI 2.1.314, permission mode "manual"): all 12 blocks, a change to a saved answer, and a refused answer, with no tool approval prompt.
 
 One question comes from the CLI itself, not from this setup: the first time it opens in a folder it has not seen, it asks "Is this a project you created or one you trust?" with **"No, exit" selected by default**. Move down to "Yes, I trust this folder" and press Enter. Pressing Enter at once closes the session; run the script again and it continues from the next unanswered question.
+
 ## Where answers go
 
 ```

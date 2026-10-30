@@ -88,6 +88,10 @@ class Launch(BootstrapCase):
         self.assertEqual(session.launches(), [])
         self.assertFalse((self.inst / "state" / "setup.json").exists())
         self.assertIn("never be asked for a password", session.text)
+        self.assertIn("“Is this a project you created or one you trust?”", session.text)
+        self.assertIn("“No, exit” is selected by default", session.text)
+        self.assertIn("press the down arrow and Enter", session.text)
+        self.assertIn("run this script again to continue", session.text)
 
     def test_second_start_continues_from_the_next_question_and_keeps_every_saved_answer(self):
         first = Session(self, FAKE_CLAUDE_STEPS="2")

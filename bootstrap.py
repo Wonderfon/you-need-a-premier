@@ -32,6 +32,7 @@ Before we start, this is what will happen:
   - Your answers are saved as files in the instance directory you chose. Nothing is sent anywhere else.
   - You will never be asked for a password, API key or token. Do not paste one.
   - No paid API is used, nothing is bought, and nobody is contacted.
+  - The first time Claude Code opens in a new folder, it asks “Is this a project you created or one you trust?”; “No, exit” is selected by default, so press the down arrow and Enter to choose “Yes, I trust this folder.” If you exit, run this script again to continue.
 You can stop at any time and run this script again; it continues from the next unanswered question."""
 
 
