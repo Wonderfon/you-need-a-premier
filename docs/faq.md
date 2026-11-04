@@ -10,4 +10,4 @@ Sources are Anthropic's own public support pages, read on 2026-10-26. Terms can 
 
 **What if the CLI changes its status format?** Usage is read from the status data the official CLI hands to the hook (`orgcore/statusline.py`). A reading that cannot be parsed, is missing a window, is stale, or has already reset is treated as unknown, and unknown closes the gate: nothing starts until a valid reading arrives. The parser is tested against a real capture from CLI 2.1.310 (`tests/fixtures/statusline-real-2.1.310.json`). A format change therefore stops work; it does not make it spend blindly. Fixing the parser is the repair.
 
-**Why do I need an interactive session open?** Headless sessions emit no readings. One idle interactive session running the status-line hook (see "Enable real workers") is the only source the gate trusts.
+**Why do I need an interactive session open?** Headless sessions emit no readings. One idle interactive session running the status-line hook (see [real-workers.md](real-workers.md)) is the only source the gate trusts.
