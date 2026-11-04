@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 710" width="1200" height="710" font-family="'Segoe UI','Microsoft YaHei',Arial,sans-serif">
+  <title>组织结构：Owner、总理、资源池、调度器、副总理和执行者团队</title>
+  <defs>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M1 1.5 L9 5 L1 8.5" fill="none" stroke="#9a8f7e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M1 1.5 L9 5 L1 8.5" fill="none" stroke="#2f6f6a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="710" fill="#faf6ee"/>
+
+  <!-- gray connections (drawn first) -->
+  <g fill="none" stroke="#9a8f7e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Premier -> resource pool -->
+    <line x1="680" y1="110" x2="800" y2="110" marker-end="url(#g)"/>
+    <!-- Premier -> Pacer (over the top) -->
+    <path d="M620 70 V40 H1070 V70" marker-end="url(#g)"/>
+    <!-- Premier <-> own Executor team -->
+    <path d="M620 150 V235 H780" marker-start="url(#g)" marker-end="url(#g)"/>
+    <!-- Premier <-> Deputies bus -->
+    <path d="M500 150 V330"/>
+    <path d="M220 330 H980"/>
+    <line x1="220" y1="330" x2="220" y2="360" marker-end="url(#g)" marker-start="url(#g)"/>
+    <line x1="600" y1="330" x2="600" y2="360" marker-end="url(#g)" marker-start="url(#g)"/>
+    <line x1="980" y1="330" x2="980" y2="360" marker-end="url(#g)" marker-start="url(#g)"/>
+    <!-- Deputy <-> Executor team -->
+    <line x1="220" y1="430" x2="220" y2="500" marker-end="url(#g)" marker-start="url(#g)"/>
+    <line x1="600" y1="430" x2="600" y2="500" marker-end="url(#g)" marker-start="url(#g)"/>
+    <line x1="980" y1="430" x2="980" y2="500" marker-end="url(#g)" marker-start="url(#g)"/>
+  </g>
+
+  <!-- accent connections: everything that touches the Owner -->
+  <g fill="none" stroke="#2f6f6a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <!-- intent alignment Owner <-> Premier -->
+    <line x1="280" y1="110" x2="440" y2="110" marker-start="url(#a)" marker-end="url(#a)"/>
+    <!-- Deputies report directly to the Owner (halo keeps the crossings readable) -->
+    <g stroke="#faf6ee" stroke-width="6">
+      <path d="M320 360 V292"/><path d="M700 360 V292"/><path d="M1080 360 V292"/>
+    </g>
+    <path d="M140 150 V292 H1080 M320 292 V360 M700 292 V360 M1080 292 V360" marker-start="url(#a)"/>
+    <!-- Owner opens any Executor session (dashed, owner-initiated) -->
+    <path d="M80 110 H40 V620 H1170 V235 H1020" stroke-dasharray="7 6" marker-end="url(#a)"/>
+    <line x1="220" y1="620" x2="220" y2="570" stroke-dasharray="7 6" marker-end="url(#a)"/>
+    <line x1="600" y1="620" x2="600" y2="570" stroke-dasharray="7 6" marker-end="url(#a)"/>
+    <line x1="980" y1="620" x2="980" y2="570" stroke-dasharray="7 6" marker-end="url(#a)"/>
+  </g>
+
+  <!-- boxes -->
+  <g stroke-width="1.5">
+    <!-- Owner -->
+    <rect x="80" y="70" width="200" height="80" rx="14" fill="#e8f0ee" stroke="#2f6f6a"/>
+    <!-- Premier -->
+    <rect x="440" y="70" width="240" height="80" rx="14" fill="#fffdf8" stroke="#cfc4b1"/>
+    <!-- Resource pool -->
+    <rect x="800" y="70" width="170" height="80" rx="14" fill="#fffdf8" stroke="#cfc4b1"/>
+    <!-- Pacer -->
+    <rect x="1000" y="70" width="140" height="80" rx="14" fill="#fffdf8" stroke="#cfc4b1"/>
+    <!-- 总理的执行者团队 -->
+    <rect x="780" y="200" width="240" height="70" rx="14" fill="#f2ebdf" stroke="#ddd2bf"/>
+    <!-- Deputies -->
+    <rect x="100" y="360" width="240" height="70" rx="14" fill="#fffdf8" stroke="#cfc4b1"/>
+    <rect x="480" y="360" width="240" height="70" rx="14" fill="#fffdf8" stroke="#cfc4b1"/>
+    <rect x="860" y="360" width="240" height="70" rx="14" fill="#fffdf8" stroke="#cfc4b1"/>
+    <!-- Deputy Executor teams -->
+    <rect x="100" y="500" width="240" height="70" rx="14" fill="#f2ebdf" stroke="#ddd2bf"/>
+    <rect x="480" y="500" width="240" height="70" rx="14" fill="#f2ebdf" stroke="#ddd2bf"/>
+    <rect x="860" y="500" width="240" height="70" rx="14" fill="#f2ebdf" stroke="#ddd2bf"/>
+  </g>
+
+  <!-- box text -->
+  <g text-anchor="middle" fill="#3a332b">
+    <g font-size="20" font-weight="600">
+      <text x="180" y="105" fill="#2f6f6a">Owner</text>
+      <text x="560" y="105">总理</text>
+      <text x="885" y="105">资源池</text>
+      <text x="1070" y="105">调度器</text>
+      <text x="220" y="393">副总理</text>
+      <text x="600" y="393">副总理</text>
+      <text x="980" y="393">副总理</text>
+    </g>
+    <g font-size="14" fill="#8a7f70">
+      <text x="180" y="130">你</text>
+      <text x="560" y="130">意图对齐、资源管理</text>
+      <text x="885" y="130">每个窗口的 token 用量</text>
+      <text x="1070" y="130">控制节奏</text>
+      <text x="220" y="414">审核、汇报</text>
+      <text x="600" y="414">审核、汇报</text>
+      <text x="980" y="414">审核、汇报</text>
+    </g>
+    <g font-size="17" font-weight="600">
+      <text x="900" y="232">总理的执行者团队</text>
+      <text x="220" y="532">执行者团队</text>
+      <text x="600" y="532">执行者团队</text>
+      <text x="980" y="532">执行者团队</text>
+    </g>
+    <g font-size="13" fill="#8a7f70">
+      <text x="900" y="253">一个 agent = 一个会话</text>
+      <text x="220" y="553">每个项目一个 agent = 一个会话</text>
+      <text x="600" y="553">每个项目一个 agent = 一个会话</text>
+      <text x="980" y="553">每个项目一个 agent = 一个会话</text>
+    </g>
+  </g>
+
+  <!-- line labels -->
+  <g font-size="13" fill="#6f675d">
+    <text x="360" y="100" text-anchor="middle" fill="#2f6f6a">意图对齐</text>
+    <text x="740" y="100" text-anchor="middle">管理</text>
+    <text x="860" y="32" text-anchor="middle">管理</text>
+    <text x="150" y="284" fill="#2f6f6a">可直接向 Owner 汇报</text>
+    <text x="745" y="322">待办清单 · 调度任务 · 分配资源</text>
+    <text x="488" y="200" text-anchor="end">与副总理沟通</text>
+    <text x="232" y="470">交付物上交审核</text>
+    <text x="612" y="470">交付物上交审核</text>
+    <text x="992" y="470">交付物上交审核</text>
+    <text x="600" y="643" text-anchor="middle" fill="#2f6f6a" font-size="14">Owner 可随时打开任一执行者的会话（由 Owner 主动发起）</text>
+    <text x="600" y="682" text-anchor="middle" font-size="13">执行者一般不直接向 Owner 汇报：交付物先经副总理或总理审核。</text>
+  </g>
+</svg>
