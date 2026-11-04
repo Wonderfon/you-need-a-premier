@@ -86,7 +86,7 @@ def _live_status(reasons: list[str], root: Path) -> list[str]:
     if not reasons:
         return ["Everything needed is in place. Start one real unit with: python -m orgcore run " + str(root)]
     return (["Real workers cannot start yet (the offline demo result stays valid):"] + [f"  - {r}" for r in reasons] +
-            ["Headless sessions give no usage readings. Keep one interactive Claude Code session open (see README, 'Enable real workers'),",
+            ["Headless sessions give no usage readings. Keep one interactive Claude Code session open (see docs/real-workers.md),",
              "then check again with: python -m orgcore usage " + str(root)])
 
 

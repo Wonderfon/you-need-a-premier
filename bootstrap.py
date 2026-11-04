@@ -156,7 +156,7 @@ def live_offer(root: Path, ask, out, claude: list[str] | None, environ, run, hom
         out("Setup phase: live_waiting_for_usage. Real workers cannot start yet (the offline demo result stays valid):")
         for reason in reasons:
             out(f"  - {reason}")
-        out("Headless sessions give no usage readings. Keep one interactive Claude Code session open (README, 'Enable real workers'),\n"
+        out("Headless sessions give no usage readings. Keep one interactive Claude Code session open (docs/real-workers.md),\n"
             f"then check with: python -m orgcore usage {root}")
     else:
         out("Everything needed is in place.")
