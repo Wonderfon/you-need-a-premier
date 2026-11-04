@@ -2,7 +2,7 @@
 
 English | [简体中文](README.zh-CN.md)
 
-*Chinese name: 你需要一个总理.* For people whose ideas outrun their capacity to execute: you align intent with an AI Premier once, and an AI organization runs your projects, pacing itself against the usage you have left.
+*Chinese name: 你需要一个总理.* Let AI's execution catch your creativity. Align intent with the AI once, and the Premier keeps your own AI organization running your projects.
 
 ## When to use it
 
@@ -10,14 +10,14 @@ Use it when you have more ideas and projects than you can execute yourself, and 
 
 1. **It runs for the long term on its own.** After one intent-alignment session, it keeps running autonomously.
 2. **It catches your new ideas.** It picks up and executes a new idea of yours at any time, and schedules resources sensibly while doing so.
-3. **It reports at the key points.** When a task reaches a key node, the AI reports to you (the Owner) on its own and asks for your feedback.
+3. **It reports at the key points.** When a task reaches a key node, the AI reports to the Owner (you) on its own and asks for your feedback.
 4. **Your data is not wasted.** Your verbatim words, the information you provide and the private data you produce are all archived. This data is valuable.
 
 ## Org structure
 
 ![Org structure](docs/org-structure.svg)
 
-- **Top layer:** the Owner, the Premier, the resource pool and the Pacer. The Premier aligns intent with the Owner, manages the resource pool and the Pacer, and has its own Executor team.
+- **Top layer:** the Owner (you), the Premier, the resource pool and the Pacer. The Premier aligns intent with the Owner, manages the resource pool and the Pacer, and has its own Executor team.
 - The Premier talks with the Deputies, and coordinates the work of every line through the to-do list, scheduling and resource allocation.
 - Each Deputy manages its own Executor team, reviews deliverables and reports. A Deputy can talk with the Premier and can report directly to the Owner.
 - Executors normally do not report to the Owner directly. A deliverable is reviewed by a Deputy or the Premier first, and only then reported to you.
@@ -30,11 +30,11 @@ Each design answers one bottleneck that appears when a person and AI work togeth
 | Design | What it does | Bottleneck it addresses |
 |---|---|---|
 | **Premier** (总理) | Resource coordination and intent alignment | Planning and resource management |
-| **Deputy** (副总理) | Reviews deliverables and reports to the Owner | Review: a person lacks the time and energy to review everything the AI produces |
+| **Deputy** (副总理) | Reviews deliverables and reports to the Owner (you) | Review: a person lacks the time and energy to review everything the AI produces |
 | **Pacer** (调度器) | Starts tasks according to token usage over a window; speeds up or slows down | Pace adjustment: watching how much quota is left and adjusting your own speed is a mental burden |
 | **Executor** | The agent that does the task. One agent = one session, one dedicated agent per project | Managing and isolating context and memory |
 | **Org board** | One place to see the whole organization | Finding the entry point to information: in a complex system with many files, just knowing where to look is hard |
-| **Voice input desk** | Rules plus a small model post-process and polish what you say; it adapts to your language habits and accent | Entering instructions, especially long ones |
+| **Voice input desk** | Rules plus a small model post-process and polish what you say; it adapts to your language habits and accent. Built on open-source models, see below | Entering instructions, especially long ones |
 | **History Keeper** | Records everything you input and every piece of information you produce | Valuable for a personal benchmark and for training personal models |
 
 ### The Pacer
@@ -44,6 +44,10 @@ The Pacer spends quota on a time rhythm and keeps a share for you, so the system
 ![Usage against the pace line](docs/images/pace-line.png)
 
 *One week of usage (fictional data). The straight line is the pace the Pacer allows itself. Work pauses when usage gets ahead of the line, and the reserve kept for you is never touched.*
+
+### Voice input desk: built on open-source models
+
+The voice input desk runs locally on open-source models. Speech to text: [Fun-ASR-Nano-2512](https://huggingface.co/FunAudioLLM/Fun-ASR-Nano-2512) from [FunASR](https://github.com/modelscope/FunASR), the Q5_K_M quantization in GGUF format. Post-processing and polish: [Qwen3-0.6B](https://huggingface.co/Qwen/Qwen3-0.6B), served by a local [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server`. Thanks to these projects.
 
 ## Optional modules
 
@@ -55,7 +59,7 @@ The Pacer spends quota on a time rhythm and keeps a share for you, so the system
 | **Colab CLI** | GPU access. If your local GPU is not enough, light tasks can run on Colab's GPU. |
 | **Google Drive** | Backup, and file transfer between devices. |
 
-## Model configuration
+## Recommended models (not required)
 
 | Role | Model |
 |---|---|
@@ -73,4 +77,4 @@ The Pacer spends quota on a time rhythm and keeps a share for you, so the system
 
 This repo is v0.1. What it ships today: the guided intent-alignment setup, the plain-text task board, a separate reviewer step, the Pacer's usage gate, and an offline rehearsal. The org board, voice input desk, History Keeper, the optional-module wiring and restoring a whole organization from a backup on a new computer are the design described above and are not in this package yet.
 
-More: [offline demo](docs/offline-demo.md) · [real workers](docs/real-workers.md) · [FAQ on billing and plan terms](docs/faq.md) · [file map](docs/layout.md) · MIT license
+More: [offline demo](docs/offline-demo.md) · [real workers](docs/real-workers.md) · [file map](docs/layout.md) · MIT license
