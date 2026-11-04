@@ -1,8 +1,8 @@
 # You Need a Premier
 
-English | [简体中文](README.zh-CN.md)
+English | [Chinese](README.zh-CN.md)
 
-*Chinese name: 你需要一个总理.* Let AI's execution catch your creativity. Align intent with the AI once, and the Premier keeps your own AI organization running your projects.
+Let AI's execution catch your creativity. Align intent with the AI once, and the Premier keeps your own AI organization running your projects.
 
 ## When to use it
 
@@ -29,9 +29,9 @@ Each design answers one bottleneck that appears when a person and AI work togeth
 
 | Design | What it does | Bottleneck it addresses |
 |---|---|---|
-| **Premier** (总理) | Resource coordination and intent alignment | Planning and resource management |
-| **Deputy** (副总理) | Reviews deliverables and reports to the Owner (you) | Review: a person lacks the time and energy to review everything the AI produces |
-| **Pacer** (调度器) | Starts tasks according to token usage over a window; speeds up or slows down | Pace adjustment: watching how much quota is left and adjusting your own speed is a mental burden |
+| **Premier** | Resource coordination and intent alignment | Planning and resource management |
+| **Deputy** | Reviews deliverables and reports to the Owner (you) | Review: a person lacks the time and energy to review everything the AI produces |
+| **Pacer** | Starts tasks according to token usage over a window; speeds up or slows down | Pace adjustment: watching how much quota is left and adjusting your own speed is a mental burden |
 | **Executor** | The agent that does the task. One agent = one session, one dedicated agent per project | Managing and isolating context and memory |
 | **Org board** | One place to see the whole organization | Finding the entry point to information: in a complex system with many files, just knowing where to look is hard |
 | **Voice input desk** | Rules plus a small model post-process and polish what you say; it adapts to your language habits and accent. Built on open-source models, see below | Entering instructions, especially long ones |

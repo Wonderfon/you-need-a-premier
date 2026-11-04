@@ -81,12 +81,12 @@
     </g>
     <g font-size="14" fill="#8a7f70">
       <text x="180" y="130">you</text>
-      <text x="560" y="130">总理 · intent, resources</text>
+      <text x="560" y="130">intent, resources</text>
       <text x="885" y="130">token usage per window</text>
-      <text x="1070" y="130">调度器 · sets the pace</text>
-      <text x="220" y="414">副总理 · review, report</text>
-      <text x="600" y="414">副总理 · review, report</text>
-      <text x="980" y="414">副总理 · review, report</text>
+      <text x="1070" y="130">sets the pace</text>
+      <text x="220" y="414">review, report</text>
+      <text x="600" y="414">review, report</text>
+      <text x="980" y="414">review, report</text>
     </g>
     <g font-size="17" font-weight="600">
       <text x="900" y="232">Premier's Executor team</text>
