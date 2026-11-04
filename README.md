@@ -33,9 +33,9 @@ Each design answers one bottleneck that appears when a person and AI work togeth
 | **Deputy** | Reviews deliverables and reports to the Owner (you) | Review: a person lacks the time and energy to review everything the AI produces |
 | **Pacer** | Starts tasks according to token usage over a window; speeds up or slows down | Pace adjustment: watching how much quota is left and adjusting your own speed is a mental burden |
 | **Executor** | The agent that does the task. One agent = one session, one dedicated agent per project | Managing and isolating context and memory |
-| **Org board** | One place to see the whole organization | Finding the entry point to information: in a complex system with many files, just knowing where to look is hard |
-| **Voice input desk** | Rules plus a small model post-process and polish what you say; it adapts to your language habits and accent. Built on open-source models, see below | Entering instructions, especially long ones |
-| **History Keeper** | Records everything you input and every piece of information you produce | Valuable for a personal benchmark and for training personal models |
+| **Org board** (not in v0.1) | One place to see the whole organization | Finding the entry point to information: in a complex system with many files, just knowing where to look is hard |
+| **Voice input desk** (not in v0.1) | Rules plus a small model post-process and polish what you say; it adapts to your language habits and accent. Built on open-source models, see below | Entering instructions, especially long ones |
+| **History Keeper** (not in v0.1) | Records everything you input and every piece of information you produce | Valuable for a personal benchmark and for training personal models |
 
 ### The Pacer
 
@@ -43,7 +43,7 @@ The Pacer spends quota on a time rhythm and keeps a share for you, so the system
 
 ![Five-hour usage against the Pacer baseline](docs/images/pace-chart-en.png)
 
-*A real five-hour window: observed usage against the Pacer's linear baseline (the straight line). Work pauses when usage gets ahead of the line, and the reserve kept for you is never touched. Personal text removed.*
+*A real five-hour window: account-wide usage against the Pacer's linear baseline (the straight line). While usage is above the line, no new task starts; tasks already running and your own sessions still count, so the curve can stay above it. The share kept for you above 95% is never used. Personal text removed.*
 
 ### Voice input desk: built on open-source models
 
@@ -53,7 +53,7 @@ The voice input desk runs locally on open-source models. Speech to text: [Fun-AS
 
 *The voice input desk, a real screenshot. Personal information removed.*
 
-## Optional modules
+## Optional modules (not in v0.1)
 
 | Module | Use |
 |---|---|
