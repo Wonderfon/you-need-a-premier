@@ -41,13 +41,17 @@ Each design answers one bottleneck that appears when a person and AI work togeth
 
 The Pacer spends quota on a time rhythm and keeps a share for you, so the system does not burn everything the moment quota is available. You can step in at any time. Even near the end of a quota window, when little is left, you only wait a little: once the window resets there is quota again.
 
-![Usage against the pace line](docs/images/pace-line.png)
+![Five-hour usage against the Pacer baseline](docs/images/pace-chart-en.png)
 
-*One week of usage (fictional data). The straight line is the pace the Pacer allows itself. Work pauses when usage gets ahead of the line, and the reserve kept for you is never touched.*
+*A real five-hour window: observed usage against the Pacer's linear baseline (the straight line). Work pauses when usage gets ahead of the line, and the reserve kept for you is never touched. Personal text removed.*
 
 ### Voice input desk: built on open-source models
 
 The voice input desk runs locally on open-source models. Speech to text: [Fun-ASR-Nano-2512](https://huggingface.co/FunAudioLLM/Fun-ASR-Nano-2512) from [FunASR](https://github.com/modelscope/FunASR), the Q5_K_M quantization in GGUF format. Post-processing and polish: [Qwen3-0.6B](https://huggingface.co/Qwen/Qwen3-0.6B), served by a local [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server`. Thanks to these projects.
+
+![The local voice input desk](docs/images/input-desk-en.png)
+
+*The voice input desk, a real screenshot. Personal information removed.*
 
 ## Optional modules
 

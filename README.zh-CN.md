@@ -41,13 +41,17 @@
 
 调度器的设计很重要的一点是，它给人留出了随时介入的空间。系统会按时间节奏消耗额度，留出一部分给人用，避免一有额度就全部烧完。即使快到额度窗口结束时，剩余额度已经很少，如果不够用，人也只需要稍微等一下，窗口一重置就又有额度了。
 
-![使用量与节奏线](docs/images/pace-line.png)
+![五小时用量与调度器基线](docs/images/pace-chart-zh.png)
 
-*一周的用量（虚构数据）。直线是调度器允许自己走的节奏。用量跑到线前面时工作暂停，留给你的额度不会被动用。*
+*真实的一个五小时窗口截图：实际用量与调度器的线性基线（直线）。用量跑到线前面时工作暂停，留给你的额度不会被动用。已去掉个人信息。*
 
 ### 语音输入台：基于开源模型
 
 语音输入台在本地运行开源模型。语音转文字：[Fun-ASR-Nano-2512](https://huggingface.co/FunAudioLLM/Fun-ASR-Nano-2512)（来自 [FunASR](https://github.com/modelscope/FunASR)），使用 GGUF 格式的 Q5_K_M 量化版本。后处理和润色：[Qwen3-0.6B](https://huggingface.co/Qwen/Qwen3-0.6B)，由本地的 [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server` 提供服务。感谢这些项目。
+
+![本地语音输入台](docs/images/input-desk-zh.png)
+
+*语音输入台的真实截图，已去掉个人信息。*
 
 ## 可选模块
 
