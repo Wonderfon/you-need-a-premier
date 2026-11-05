@@ -13,6 +13,10 @@ Use it when you have more ideas and projects than you can execute yourself, and 
 3. **It reports at the key points.** When a task reaches a key node, the AI reports to the Owner (you) on its own and asks for your feedback.
 4. **Your data is not wasted.** Your verbatim words, the information you provide and the private data you produce are all archived. This data is valuable.
 
+   <img src="docs/images/accumulation-en.png" width="360" alt="The Accumulation panel on the org dashboard">
+
+   *The Accumulation panel on the org dashboard, a real screenshot (excerpt, labels translated): your words, voice and materials, counted week by week.*
+
 ## Org structure
 
 ![Org structure](docs/org-structure.svg)
