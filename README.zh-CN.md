@@ -53,6 +53,8 @@
 
 语音输入台在本地运行开源模型。语音转文字：[Fun-ASR-Nano-2512](https://huggingface.co/FunAudioLLM/Fun-ASR-Nano-2512)（来自 [FunASR](https://github.com/modelscope/FunASR)），使用 GGUF 格式的 Q5_K_M 量化版本。后处理和润色：[Qwen3-0.6B](https://huggingface.co/Qwen/Qwen3-0.6B)，由本地的 [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server` 提供服务。感谢这些项目。
 
+**自动推荐规则。** 同一个听错的词，你在两个以上的会话里改成了同一种写法，输入台就会推荐一条「听成→改成」的规则，前提是套用后不会误改你写过的其他内容。点一下接受，规则可以删除或停用，这个错就不会再出现。
+
 ![本地语音输入台](docs/images/input-desk-zh.png)
 
 *语音输入台的真实截图，已去掉个人信息。*
@@ -73,6 +75,12 @@
 |---|---|
 | 总理和副总理 | Opus 5.5 High |
 | 执行者 | Sonnet 5.5 High |
+
+## 最简配置：粘贴一段提示词
+
+不用先填问卷。给组织建一个文件夹，把项目和文件放进去，在里面打开 Claude Code，粘贴 [`prompts/quick-setup.zh-CN.md`](prompts/quick-setup.zh-CN.md) 里的提示词。
+
+Claude 会先读完所有内容，告诉你它找到了什么，再只问它读不出来的事。它还会问你要不要拉取本仓库，直接复用已经做好的部分；不要的话，它按设计自己搭（花你更多 token，控制权更大）。
 
 ## 简单教程
 

@@ -53,6 +53,8 @@ The Pacer spends quota on a time rhythm and keeps a share for you, so the system
 
 The voice input desk runs locally on open-source models. Speech to text: [Fun-ASR-Nano-2512](https://huggingface.co/FunAudioLLM/Fun-ASR-Nano-2512) from [FunASR](https://github.com/modelscope/FunASR), the Q5_K_M quantization in GGUF format. Post-processing and polish: [Qwen3-0.6B](https://huggingface.co/Qwen/Qwen3-0.6B), served by a local [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server`. Thanks to these projects.
 
+**Automatic rule suggestions.** When you correct the same misheard phrase in two or more sessions, the desk proposes a "heard → corrected" rule, only if applying it would have wrongly changed nothing else you wrote. Accept it with one click (rules can be deleted or switched off), and that mistake stops coming back.
+
 ![The local voice input desk](docs/images/input-desk-en.png)
 
 *The voice input desk, a real screenshot. Personal information removed.*
@@ -73,6 +75,12 @@ The voice input desk runs locally on open-source models. Speech to text: [Fun-AS
 |---|---|
 | Premier and Deputy | Opus 5.5 High |
 | Executor | Sonnet 5.5 High |
+
+## Simplest setup: paste one prompt
+
+No questionnaire first. Make a folder for the organization, put your projects and files in it, open Claude Code there and paste [`prompts/quick-setup.md`](prompts/quick-setup.md).
+
+Claude reads everything, shows what it found, then asks only what it could not infer. It also offers to clone this repo and reuse what is already built; decline and it builds from the design instead (more of your tokens, more control).
 
 ## Quick start
 
