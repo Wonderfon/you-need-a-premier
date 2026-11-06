@@ -4,7 +4,7 @@ English | [Chinese](README.zh-CN.md)
 
 Let AI's execution catch your creativity. Align intent with the AI once, and the Premier keeps your own AI organization running your projects.
 
-**Start:** make a folder, open Claude Code in it, paste [one prompt](#quick-start).
+**Simplest Start:** make a folder, open Claude Code in it, paste [one prompt](#quick-start).
 
 ## When to use it
 
