@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>冲刺一页状态</title>
+  <style nonce="__CSP_NONCE__">
+    :root { --bg: #fff; --text: #171717; --muted: #555; --soft: #686868; --surface: #f5f6f8; --pale: #dce7ff;
+      --blue: #4268f6; --line: #d4d6db; --hair: #e6e8ec; --warn: #8a4b00; --warn-soft: #fff4e0;
+      --bad: #b42318; --bad-soft: #fef3f2; --ok: #1a6b3a; --ok-soft: #e8f6ee; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+      font: 15px/1.55 "Nunito Sans", system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    a { color: var(--blue); text-decoration: none; overflow-wrap: anywhere; }
+    a:hover { text-decoration: underline; }
+    :focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+    .shell { max-width: 880px; margin: 0 auto; padding: 16px 16px 64px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px 12px;
+      padding-bottom: 12px; border-bottom: 1px solid var(--hair); }
+    .brand { font-weight: 700; color: var(--text); }
+    .muted { color: var(--muted); }
+    h1 { margin: 18px 0 6px; font-size: 22px; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
+    .nowrap { white-space: nowrap; }
+    h2 { font-size: 18px; margin: 30px 0 2px; overflow-wrap: anywhere; }
+    .status { font-size: 12.5px; color: var(--soft); margin: 4px 0 0; }
+    .status.error { color: var(--bad); font-weight: 700; }
+    .small { font-size: 12.5px; color: var(--soft); margin: 4px 0 0; overflow-wrap: anywhere; }
+    .card { border: 1px solid var(--hair); border-radius: 14px; padding: 12px 14px; margin-top: 12px; background: #fff; min-width: 0; }
+    .card.bad { border-left: 5px solid var(--bad); }
+    .card.mine { border-left: 5px solid var(--blue); }
+    .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; align-items: center; }
+    .badge { font-size: 12px; padding: 1px 9px; border-radius: 999px; background: var(--surface); color: var(--muted); }
+    .badge.line { background: var(--text); color: #fff; font-weight: 700; }
+    .badge.running { background: var(--ok-soft); color: var(--ok); font-weight: 700; }
+    .badge.review { background: var(--pale); color: #1f3aa8; font-weight: 700; }
+    .badge.todo { background: var(--surface); color: var(--text); font-weight: 700; }
+    .badge.blocked { background: var(--warn-soft); color: var(--warn); font-weight: 700; }
+    .badge.stuck { background: var(--bad-soft); color: var(--bad); font-weight: 700; }
+    .badge.unknown { background: #fff; border: 1px dashed var(--line); }
+    .fact { margin: 6px 0 0; overflow-wrap: anywhere; }
+    .fact b { color: var(--soft); font-weight: 700; font-size: 13px; margin-right: 6px; }
+    .fact.zero b + span { color: var(--ok); font-weight: 700; }
+    .fact.many b + span { color: var(--bad); font-weight: 700; }
+    .goal { margin: 4px 0 0; font-size: 14px; overflow-wrap: anywhere; }
+    .row-title { margin: 2px 0 4px; font-size: 15px; font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; }
+    .row .meta { font-size: 13px; color: var(--muted); margin: 2px 0 0; overflow-wrap: anywhere; }
+    .row .meta b { color: var(--soft); font-weight: 700; margin-right: 4px; }
+    details { margin-top: 6px; }
+    summary { cursor: pointer; color: var(--soft); font-size: 13px; min-height: 28px; }
+    details p { margin: 6px 0 0; font-size: 13px; color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+    h3 { margin: 18px 0 0; font-size: 15px; color: var(--soft); }
+    .empty { margin-top: 10px; color: var(--muted); font-size: 14px; }
+    .foot { margin-top: 36px; font-size: 12.5px; color: var(--soft); overflow-wrap: anywhere; }
+    @media (max-width: 600px) { h1 { font-size: 20px; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div><a class="brand" href="/sprint">冲刺一页状态</a><span class="muted"> · 只读</span></div>
+      <div><a href="/dashboard">组织看板</a> · <a href="/todo">要你的</a> · <a href="/">输入台</a></div>
+    </div>
+    <h1 id="headline">读取中…</h1>
+    <p class="status" id="status" role="status"></p>
+    <section id="first" aria-label="第一屏"></section>
+    <section id="owner" aria-label="要你做的" hidden></section>
+    <section id="lines" aria-label="各线明细"></section>
+    <p class="foot" id="foot"></p>
+  </div>
+  <script nonce="__CSP_NONCE__">
+    (() => {
+      'use strict';
+      const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+      const $ = id => document.getElementById(id);
+      const VERDICT = { pass: '通过', rework: '返工', blocked: '卡住', unknown: '没有结论' };
+      const badge = (cls, text) => el('span', 'badge ' + cls, text);
+      const fact = (label, value, cls) => { const p = el('p', 'fact' + (cls ? ' ' + cls : '')); p.append(el('b', null, label), el('span', null, value)); return p; };
+      const link = (f) => { if (!f.href) return el('span', null, f.name); const a = el('a', null, f.name); a.href = f.href; return a; };
+      const files = (list) => { const s = el('span'); list.forEach((f, i) => { if (i) s.append(' ｜ '); s.append(link(f)); }); return s; };
+
+      function ageBadge(row) {
+        const b = badge(row.stuck ? 'stuck' : row.age_seconds == null ? 'unknown' : '', (row.age_seconds == null ? '多久了：' : '在这个状态 ') + row.age_text);
+        if (row.age_source) b.title = row.age_source;
+        return b;
+      }
+
+      function rowCard(row) {
+        const c = el('div', 'card row' + (row.alarm || row.stuck ? ' bad' : ''));
+        const top = el('div', 'badges');
+        top.append(badge(row.status, row.owner ? '要你做' : row.status_label), ageBadge(row));
+        if (row.alarm) top.append(badge('stuck', '真卡住：' + row.alarm.kind + ' · ' + row.alarm.age_text));
+        c.append(top, el('p', 'row-title', row.head));
+        if (row.detail) c.append(el('p', 'meta', row.detail));
+        const exec = row.last_exec, rev = row.last_review;
+        if (!exec && !rev) {
+          const m = el('p', 'meta'); m.append(el('b', null, '最近执行／审查'), row.ledger_known ? '账本里都没有' : '不知道（账本读不出来）'); c.append(m);
+        } else {
+          const m1 = el('p', 'meta');
+          m1.append(el('b', null, '最近执行'), exec ? exec.at + (exec.ok ? ' 完成' : ' 失败' + (exec.code != null ? '（退出码 ' + exec.code + '）' : '')) : '账本里没有');
+          const m2 = el('p', 'meta');
+          m2.append(el('b', null, '最近审查'), rev ? rev.at + ' ' + (VERDICT[rev.verdict] || '没有结论') : '账本里没有');
+          c.append(m1, m2);
+        }
+        if (row.files.length) { const m3 = el('p', 'meta'); m3.append(el('b', null, '结果文件'), files(row.files)); c.append(m3); }
+        if (row.age_source) c.append(el('p', 'small', '时长依据：' + row.age_source + (row.since ? '，进入于 ' + row.since : '')));
+        const d = el('details'); d.append(el('summary', null, '这一行全文'), el('p', null, row.full)); c.append(d);
+        return c;
+      }
+
+      function goalBlock(g) {
+        const box = el('div');
+        box.append(el('p', 'goal', g.short + (g.cut ? '…' : '')));
+        if (g.cut || g.full.length > g.short.length + 20) {
+          const d = el('details'); d.append(el('summary', null, '展开冲刺行全文'), el('p', null, g.full)); box.append(d);
+        }
+        return box;
+      }
+
+      function firstCard(line) {
+        const c = el('div', 'card' + (line.alarm_rows.length || line.stuck ? ' bad' : ''));
+        const top = el('div', 'badges');
+        top.append(badge('line', line.section), badge('', line.goal.project || line.sprint));
+        c.append(top);
+        const g = el('div'); g.append(el('b', 'small', '版本目标'), goalBlock(line.goal)); c.append(g);
+        const next = line.next;
+        c.append(fact('下一步', next ? next.head + '（' + next.status_label + '，' + next.age_text + '）'
+          : line.working ? '没有排着的行，正在做：' + line.working.head : '没有待办行'));
+        const stuck = fact('等了 ' + DATA.stuck_hours + ' 小时以上', line.stuck + ' 条' + (line.unknown ? '（另有 ' + line.unknown + ' 条不知道多久了）' : ''),
+          line.stuck ? 'many' : 'zero');
+        c.append(stuck, alarmDetails(line.alarm_rows));
+        return c;
+      }
+
+      function alarmDetails(rows) {
+        const box = el('details', 'alarms');
+        box.append(el('summary', null, '真卡住 ' + rows.length + ' 条（点开看）'));
+        if (!rows.length) box.append(el('p', null, '没有达到卡住报警条件的行。'));
+        rows.forEach(row => { const card = rowCard(row); if (row.section) card.prepend(el('p', 'small', row.section)); box.append(card); });
+        return box;
+      }
+
+      function detail(line) {
+        const box = el('div');
+        box.append(el('h2', null, line.section + ' · ' + (line.goal.project || line.sprint)));
+        box.append(el('p', 'small', '进行中 ' + line.counts.running + ' · 等审查 ' + line.counts.review + ' · 待做 ' + line.counts.todo +
+          ' · 卡住／等别的 ' + line.counts.blocked + (line.owner.length ? ' · 要你做 ' + line.owner.length + '（在上面）' : '')));
+        const names = { running: '进行中', review: '等审查', todo: '待做', blocked: '卡住／等别的（定时、等上一行过审的也在这里）' };
+        for (const s of ['running', 'review', 'todo', 'blocked']) {
+          const rows = line.groups[s];
+          if (!rows.length) continue;
+          const wrap = s === 'blocked' && rows.length > 4 ? el('details') : el('div');
+          if (wrap.tagName === 'DETAILS') wrap.append(el('summary', null, names[s] + ' ' + rows.length + ' 条（点开看）'));
+          else wrap.append(el('h3', null, names[s] + ' ' + rows.length + ' 条'));
+          const shown = wrap.tagName === 'DETAILS' ? 0 : SHOW;
+          rows.slice(0, shown).forEach(r => wrap.append(rowCard(r)));
+          if (rows.length > shown) {
+            const rest = wrap.tagName === 'DETAILS' ? wrap : el('details');
+            if (rest !== wrap) rest.append(el('summary', null, '还有 ' + (rows.length - shown) + ' 条（点开看）'));
+            rows.slice(shown).forEach(r => rest.append(rowCard(r)));
+            if (rest !== wrap) wrap.append(rest);
+          }
+          box.append(wrap);
+        }
+        if (!line.counts.running && !line.counts.review && !line.counts.todo && !line.counts.blocked && !line.owner.length) box.append(el('p', 'empty', '这个项目现在没有未完成的行。'));
+        box.append(el('h3', null, '最近完成 ' + line.done.length + ' 条'));
+        if (!line.done.length) box.append(el('p', 'empty', '没有找到这个项目已完成的行。'));
+        line.done.forEach(x => {
+          const c = el('div', 'card row');
+          c.append(el('p', 'row-title', x.head));
+          const m = el('p', 'meta'); m.append(el('b', null, '完成'), x.day || '日期没写'); c.append(m);
+          if (x.detail) c.append(el('p', 'small', x.detail));
+          const f = el('p', 'meta'); f.append(el('b', null, '结果文件'));
+          if (x.files.length) f.append(files(x.files)); else f.append('行里没有写结果文件');
+          c.append(f);
+          box.append(c);
+        });
+        return box;
+      }
+
+      const SHOW = 5; // rows of one group shown open; the rest fold
+      let DATA = { stuck_hours: 6 };
+      function render(data) {
+        DATA = data;
+        const sprinting = data.lines.filter(l => l.sprint && l.goal);
+        $('headline').replaceChildren(sprinting.length + ' 条线在冲刺，等了 ' + data.stuck_hours + ' 小时以上的 ' + data.stuck_total + ' 条，',
+          el('span', 'nowrap', '真卡住 ' + data.alarm_total + ' 条'));
+        const when = new Date(data.generated_at_utc);
+        $('status').className = 'status';
+        $('status').textContent = '读取于 ' + when.toLocaleTimeString('zh-CN', { hour12: false }) + '，每分钟自动刷新' +
+          (data.ledger === 'unreadable' ? '；执行账本读不出来，时长多半写「不知道」' : '');
+        const first = $('first'); first.replaceChildren();
+        first.append(alarmDetails(sprinting.flatMap(l => l.alarm_rows.map(r => ({ ...r, section: l.section })))));
+        if (!sprinting.length) first.append(el('p', 'empty', '现在没有哪条线写了「冲刺：」行。'));
+        sprinting.forEach(l => first.append(firstCard(l)));
+        const owner = $('owner'); owner.replaceChildren(); owner.hidden = !data.owner.length;
+        if (data.owner.length) {
+          owner.append(el('h2', null, '要你做的 ' + data.owner.length + ' 条'));
+          owner.append(el('p', 'small', '冲刺项目里在等你的行。回复和点「做完了」在「要你的」页。'));
+          data.owner.forEach(r => { const c = rowCard(r); c.classList.add('mine'); const a = el('a', null, '去「要你的」页处理'); a.href = '/todo'; c.append(a);
+            c.insertBefore(el('p', 'small', r.section), c.firstChild); owner.append(c); });
+        }
+        const lines = $('lines'); lines.replaceChildren();
+        sprinting.forEach(l => lines.append(detail(l)));
+        const others = data.lines.filter(l => !(l.sprint && l.goal)).map(l => l.section);
+        if (others.length) lines.append(el('p', 'small', '没有冲刺项目的线：' + others.join('、') + '。'));
+        $('foot').textContent = '真卡住与调度器卡住报警一致：dotz 阻塞、沙箱／权限挡住、返回重派、Claude 标签待做未派出，持续至少 6 小时。等了 ' + data.stuck_hours + ' 小时以上 = 进行中、等审查、待做、等你的行里，进入当前状态已超过这么久的；定时行和等上一行过审的不算。两种计数可能重叠，不能相加。时长按账本、行里写的时间、任务表副本依次推，推不出来写「不知道」；「至少」表示副本只留到那里。';
+      }
+
+      async function load() {
+        try {
+          const response = await fetch('/api/sprint', { credentials: 'same-origin' });
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          const data = await response.json();
+          if (data.state !== 'ok') { $('headline').textContent = '读不出任务表'; $('status').className = 'status error'; $('status').textContent = '任务表状态：' + data.state; return; }
+          render(data);
+        } catch (err) {
+          $('status').className = 'status error';
+          $('status').textContent = '读取失败（' + err.message + '），一分钟后再试。';
+        }
+      }
+      load();
+      setInterval(load, 60000);
+    })();
+  </script>
+</body>
+</html>

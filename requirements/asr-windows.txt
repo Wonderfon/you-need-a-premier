@@ -1,0 +1,5 @@
+# Component: ASR worker, Windows side (input/nano.py: transcribe.cpp on the RTX GPU over Vulkan). Venv: .runtime\quant-gpu-venv
+# Interpreter: Windows Python 3.12.10. Local source: `.runtime\quant-gpu-venv\Scripts\python.exe -m pip freeze` read 2026-11-05.
+# nano.py imports av and numpy only in its WSL decoder function (input/nano.py:145-146), which runs in the WSL venv (asr-wsl.txt); this venv needs just transcribe_cpp.
+transcribe-cpp==0.2.4
+transcribe-cpp-native==0.2.4

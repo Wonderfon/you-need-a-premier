@@ -1,0 +1,2 @@
+# Component: local polish model (input/llm_postprocess.py -> llama-server on 127.0.0.1:8086). No pip packages; see the binary and weight
+# table in docs/install-contract.md. Settings live in input/data/llm-postprocess.json (backed up by the daily ZIP).

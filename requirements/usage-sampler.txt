@@ -1,0 +1,7 @@
+# Component: usage sampler / terminal reader (runtime/, control/usage_sample.py). Venv: .runtime\usage-venv
+# Interpreter: Python 3.12.14 bundled with the Codex runtime (C:\orghome\.cache\codex-runtimes\codex-primary-runtime\dependencies\python).
+# Local source: `.runtime\usage-venv\Scripts\python.exe -m pip freeze` read 2026-11-05. Same as runtime/requirements.txt plus wcwidth (pyte's dependency).
+pyte==0.8.2
+pywinpty==3.0.5
+tzdata==2026.4
+wcwidth==0.9.1

@@ -1,0 +1,12 @@
+{
+  "owner_user_id": null,
+  "guild_id": null,
+  "channels": {
+    "coordinator": null,
+    "life": null,
+    "work": null,
+    "uvox": null,
+    "quant": null,
+    "intelligence": null
+  }
+}

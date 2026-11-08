@@ -1,0 +1,881 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>组织看板</title>
+  <style nonce="__CSP_NONCE__">
+    :root { --bg: #fff; --text: #171717; --muted: #555; --soft: #686868; --surface: #f5f6f8; --pale: #dce7ff;
+      --blue: #4268f6; --control: #999; --line: #d4d6db; --hair: #e6e8ec;
+      --warn: #8a4b00; --warn-soft: #fff4e0; --bad: #b42318; --bad-soft: #fef3f2; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+      font: 15px/1.55 "Nunito Sans", system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    a { color: var(--blue); text-decoration: none; border-radius: 4px; }
+    a:hover { text-decoration: underline; }
+    :focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+    .shell { max-width: 1120px; margin: 0 auto; padding: 18px 20px 56px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      padding-bottom: 12px; border-bottom: 1px solid var(--hair); }
+    .brand { font-weight: 700; color: var(--text); }
+    .muted { color: var(--muted); }
+    .load-status { font-size: 12.5px; color: var(--soft); margin: 8px 0 0; }
+    .load-status.error { color: var(--bad); }
+
+    .hero { margin: 22px 0 18px; }
+    .eyebrow { margin: 0; font-size: 12px; letter-spacing: .08em; color: var(--blue); font-weight: 700; }
+    h1 { margin: 4px 0 8px; font-size: 26px; font-weight: 800; line-height: 1.3; }
+    .small { font-size: 12.5px; margin: 6px 0 0; }
+
+    h2 { font-size: 16px; font-weight: 700; margin: 0; }
+    h3 { font-size: 15px; margin: 0; font-weight: 600; }
+    .split { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+    .toplinks { display: contents; }
+    .toplinks a[hidden] + .sep { display: none; }  /* a hidden link takes its separator with it */
+    .panel { border: 1px solid var(--hair); border-radius: 14px; padding: 16px 18px; background: #fff; margin-top: 16px; min-width: 0; }
+    .split .panel { margin-top: 0; }
+    .panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .panel-note, .panel-foot { font-size: 12.5px; color: var(--soft); }
+    .panel-foot { margin: 10px 0 0; }
+
+    .chart { width: 100%; min-height: 120px; }
+    .chart svg { display: block; max-width: 100%; height: auto; }
+    .u-grid { stroke: var(--hair); stroke-width: 1; }
+    .u-axis { stroke: var(--line); stroke-width: 1; }
+    .u-label { fill: var(--soft); font-size: 11px; }
+    .u-value { fill: var(--text); font-size: 12px; font-weight: 700; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+    .u-base { stroke: var(--soft); stroke-width: 1.5; }
+    .u-pause { stroke: var(--warn); stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .u-ceiling { stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .u-now { stroke: var(--text); stroke-width: 1; }
+    .u-obs { fill: none; stroke: var(--blue); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    .u-dot { fill: var(--blue); }
+    .u-hit { fill: transparent; }
+    .legend { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--muted); }
+    .legend li { display: inline-flex; align-items: center; gap: 6px; }
+    .key { display: inline-block; width: 16px; flex: none; }
+    .key-obs { height: 3px; background: var(--blue); border-radius: 2px; }
+    .key-base { height: 2px; background: var(--soft); }
+    .key-pause { border-top: 2px dashed var(--warn); }
+    .key-ceiling { border-top: 2px dashed var(--bad); }
+    .key-now { width: 2px; height: 12px; background: var(--text); }
+
+    .callout { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; background: var(--surface); font-weight: 600; }
+    .callout.warn { background: var(--warn-soft); color: var(--warn); }
+    .role-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .role { display: inline-flex; align-items: center; gap: 8px; padding: 5px 8px 5px 12px; border: 1px solid var(--line);
+      border-radius: 999px; font-size: 14px; }
+    .role.off { background: var(--surface); color: var(--soft); border-color: var(--hair); }
+    .role-name { font-weight: 600; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+    .card { border: 1px solid var(--hair); border-radius: 12px; padding: 12px 14px; background: #fff; min-width: 0; }
+    .card.inactive { background: var(--surface); color: var(--muted); }
+    .card-head, .row-head { display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; }
+    .card p { margin: 6px 0 0; font-size: 14px; word-break: break-word; }
+    .card .meta { font-size: 13px; color: var(--muted); }
+
+    .list { border-top: 1px solid var(--hair); }
+    .row { padding: 10px 2px; border-bottom: 1px solid var(--hair); }
+    .row-title { font-weight: 600; word-break: break-word; margin-top: 4px; }
+    .row-head .row-title { margin-top: 0; }
+    .row-meta { font-size: 13px; margin-top: 2px; color: var(--muted); word-break: break-word; }
+    .row-meta.warn-text { color: var(--warn); font-weight: 600; }
+    .badge { display: inline-block; font-size: 12px; line-height: 1.5; padding: 1px 8px; border-radius: 999px;
+      background: var(--surface); color: var(--muted); white-space: nowrap; }
+    .badge.blue { background: var(--pale); color: #1d3fc4; }
+    .badge.ok { background: var(--surface); color: var(--text); }
+    .badge.warn { background: var(--warn-soft); color: var(--warn); }
+    .badge.bad { background: var(--bad-soft); color: var(--bad); }
+    .empty { color: var(--muted); font-size: 14px; padding: 8px 2px; margin: 0; }
+    .sub { margin: 16px 0 6px; font-size: 14px; }
+    .footer { margin-top: 36px; font-size: 12.5px; color: var(--soft); }
+    .accumulation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 10px; }
+    .accumulation-card { min-width: 0; border: 1px solid var(--hair); border-radius: 10px; padding: 10px; }
+    .accumulation-card h3 { font-size: 12.5px; color: var(--muted); }
+    .accumulation-value { font-size: 27px; font-weight: 800; line-height: 1.4; overflow-wrap: anywhere; }
+    .accumulation-value small { font-size: 12px; font-weight: 400; margin-left: 4px; }
+    .accumulation-card svg { width: 100%; height: 48px; display: block; }
+    .accumulation-range { display: flex; justify-content: space-between; gap: 6px; font-size: 11px; color: var(--soft); }
+.accumulation-note { margin: 8px 0 0; font-size: 11px; color: var(--soft); }
+    .topbar { flex-wrap: wrap; }
+
+    .plans { display: grid; gap: 10px; }
+    .plan { border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+    .plan > summary { list-style: none; cursor: pointer; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px;
+      padding: 10px 14px; border-radius: 11px; }
+    .plan > summary::-webkit-details-marker, .item > summary::-webkit-details-marker { display: none; }
+    .plan > summary::before, .item > summary::before { content: '▸'; color: var(--blue); display: inline-block; transition: transform .15s; }
+    .plan[open] > summary::before, .item[open] > summary::before { transform: rotate(90deg); }
+    .plan > summary:hover { background: var(--surface); }
+    .plan[open] > summary { border-bottom: 1px solid var(--hair); border-radius: 11px 11px 0 0; }
+    .plan-name { font-weight: 700; margin-right: 4px; }
+    .plan-body { padding: 2px 14px 12px; }
+    .plan-note { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+    .plan h4 { font-size: 13.5px; margin: 14px 0 2px; color: var(--muted); }
+    .steps { margin: 0; padding-left: 22px; }
+    .steps > li::marker { color: var(--soft); font-size: 13px; }
+    .item { padding: 6px 2px; border-bottom: 1px solid var(--hair); word-break: break-word; }
+    .item > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 6px; }
+    .item > summary::before { font-size: 12px; }
+    .item > summary:hover .item-title { color: var(--blue); }
+    .item-title { flex: 1 1 14em; min-width: 0; }
+    .item-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 6px; }
+    .item-full { margin: 6px 0 2px; font-size: 14px; color: var(--muted); }
+    .agents-list { padding: 8px 0 0; }
+    .agent { padding: 8px 4px; }
+    .agent > summary { padding: 2px 0; }
+    .agent > summary:hover { background: var(--surface); border-radius: 6px; }
+    .agent .item-title { flex: 0 1 auto; font-weight: 600; }
+    .agent-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 3px 12px; margin: 8px 0 4px 18px; font-size: 13.5px; }
+    .agent-facts dt { color: var(--soft); }
+    .agent-facts dd { margin: 0; color: var(--text); word-break: break-word; }
+    .cmd { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+    .cmd code { flex: 1 1 0; min-width: 0; padding: 4px 8px; background: var(--surface); border: 1px solid var(--hair); border-radius: 8px;
+      font: 12.5px/1.5 ui-monospace, Consolas, monospace; overflow-wrap: anywhere; user-select: all; }
+    .copy-btn { flex: none; min-height: 32px; padding: 3px 14px; border: 1px solid var(--blue); border-radius: 8px; background: var(--pale);
+      color: #1d3fc4; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .copy-btn:hover { background: var(--blue); color: #fff; }
+    .copy-btn:active { transform: translateY(1px); }
+    .copy-btn.done { background: #e6f6ec; border-color: #0a6b3d; color: #0a6b3d; }
+    .copy-btn.fail { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
+    @media (max-width: 760px) {
+      .shell { padding: 14px 16px 40px; }
+      h1 { font-size: 22px; }
+      .split { grid-template-columns: 1fr; }
+      .panel { padding: 14px; }
+      .cmd { flex-direction: column; align-items: stretch; }
+      .cmd code { flex: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div><a class="brand" href="/dashboard">组织看板</a><span class="muted"> · 只读</span></div>
+      <nav class="toplinks"><a href="/sprint" id="sprint-link">冲刺</a><span class="sep">·</span><a href="/todo">要你的</a><span class="sep">·</span>__POETRY_LINK__<a href="/">返回输入台</a></nav>
+    </header>
+    <p id="load-status" class="load-status" role="status" aria-live="polite">正在读取组织状态…</p>
+
+    <section class="hero" aria-labelledby="headline">
+      <p class="eyebrow">__COORDINATOR_LABEL__</p>
+      <h1 id="headline">正在读取…</h1>
+      <p class="muted small">__COORDINATOR_NOTE__</p>
+      <p id="headline-note" class="muted small"></p>
+    </section>
+
+    <section class="panel" id="accumulation-panel" aria-labelledby="accumulation-title">
+      <div class="panel-head"><h2 id="accumulation-title">积累</h2><span id="accumulation-status" class="panel-note" role="status">正在统计…</span></div>
+      <p id="accumulation-summary" class="callout">你的每次交互都在留下积累。</p>
+      <div id="accumulation-metrics" class="accumulation-grid"></div>
+<p class="accumulation-note">其他原话：records 里 channel 和 source 都没写明终端或 Discord 的原话，包括写着输入台的记录。输入台口述后粘进终端或 Discord 的，算在那两张。</p>
+      <details class="panel-foot"><summary>计数与增长线口径</summary>
+        <p>只显示数量，不展示内容。增长线按现存条目的发生日期、以周一为起点累计；当前周尚未结束。没有日期的条目计入总数，不补造历史。</p>
+        <p>原话按 records 中结构化原文字段计条，列表逐条计；历史字段别名只取一份，旧会话已被来源键引用的原话不重复计。字数含标点、英文字符，不含空白。没有明确来源的单列。非结构化说明和任务稿不计。</p>
+        <p>Discord 只计网关接收的 owner 消息及已保存附件，不读取附件正文。录音沿用「可训练语音」的完整录音确认和时长校验，按录制日期画当前状态，不代表当周确认的数量；包含留出和手改较多的已确认语音，不等于可训练小时。缺时长归未确认、时长计零。手改统计本人保存的 correction 版本。</p>
+        <p>回复包含已处理、排除撤回；评价按保存次数分用／没用／返工。材料按 M 编号去重，日期取登记的给定日期；早期资料的「≤日期」只是日期上界，不展开批次内文件。</p>
+      </details>
+    </section>
+
+    <section class="panel" id="supervisor-panel" aria-labelledby="supervisor-title">
+      <div class="panel-head"><h2 id="supervisor-title">调度器 supervisor</h2><span id="supervisor-status" class="badge warn">正在读取</span></div>
+      <p id="supervisor-note" class="meta">正在读取启动版本。</p>
+    </section>
+
+    <section class="panel" id="secretary-panel" aria-labelledby="secretary-title" __SECRETARY_HIDDEN__>
+      <div class="panel-head"><h2 id="secretary-title">备用总理秘书（Codex）</h2><span class="panel-note">Claude 额度用完时用 · 复制后在 PowerShell 粘贴运行 · 会话里按两次 Ctrl+C 或输入 /quit 退出</span></div>
+      <h3 class="sub">启动</h3>
+      <div id="secretary-start"></div>
+      <h3 class="sub">会话卡死时另开 PowerShell 停止</h3>
+      <div id="secretary-stop"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="review-title">
+      <div class="panel-head"><h2 id="review-title"><a href="/todo">要你的 →</a></h2><span id="review-note" class="panel-note">要你决定、做、看、试的事都在这一页；报告、截图和已部署的 demo 在资料库</span></div>
+      <div id="review-counts" class="role-row"></div>
+      <p id="scheduler-hint" class="meta" hidden>调度器还没设置，见 control/README.md。</p>
+    </section>
+
+    <section class="panel" id="usage-panel" aria-labelledby="usage-title">
+      <div class="panel-head"><h2 id="usage-title">五小时窗口用量 · 对照线性基线</h2><span id="usage-note" class="panel-note"></span></div>
+      <div id="usage-chart" class="chart"></div>
+      <ul id="usage-legend" class="legend" aria-label="图例"></ul>
+      <p id="usage-foot" class="panel-foot"></p>
+      <h3 class="sub">最近结束的窗口</h3>
+      <div id="usage-history" class="list"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="deputies-title">
+      <div class="panel-head"><h2 id="deputies-title">常驻副总理</h2><span id="deputies-note" class="panel-note"></span></div>
+      <div id="deputies"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="agents-title">
+      <div class="panel-head"><h2 id="agents-title">各线 agent</h2><span id="agents-note" class="panel-note">总理 → 副总理 → 各项目 agent · 点开逐级展开</span></div>
+      <div id="agents" class="plans"></div>
+    </section>
+
+    <section class="panel" id="delivery-panel" aria-labelledby="delivery-title">
+      <div class="panel-head"><h2 id="delivery-title">项目交付与待合分支</h2><span id="delivery-note" class="panel-note"></span></div>
+      <p class="panel-note">距上次交付超过 7 天提醒；过审未合超过 5 条，暂停自发新草样，先叠可用版本。owner 交办和返工照常。</p>
+      <div id="project-delivery" class="list"></div>
+    </section>
+
+    <section class="panel" id="timed-rows-panel" aria-labelledby="timed-rows-title" hidden>
+      <div class="panel-head"><h2 id="timed-rows-title">到点行错过</h2></div>
+      <div id="timed-rows" class="list"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="plans-title">
+      <div class="panel-head"><h2 id="plans-title">各线计划</h2><span id="plans-note" class="panel-note"></span></div>
+      <div id="plans" class="plans"></div>
+    </section>
+
+    <section class="panel" id="machine-panel" aria-labelledby="machine-title" hidden>
+      <div class="panel-head"><h2 id="machine-title">机器</h2><span id="machine-note" class="panel-note"></span></div>
+      <div id="machine" class="list"></div>
+    </section>
+
+    <div class="split">
+      <section class="panel" aria-labelledby="queue-title">
+        <div class="panel-head"><h2 id="queue-title">请求队列</h2><span id="queue-note" class="panel-note"></span></div>
+        <div id="queue-open" class="list"></div>
+        <h3 class="sub">最近已回复</h3>
+        <div id="queue-answered" class="list"></div>
+      </section>
+      <section class="panel" aria-labelledby="deploys-title">
+        <div class="panel-head"><h2 id="deploys-title">已部署的产品</h2><span class="panel-note">登记于 projects/deployments.json · 在线状态每 5 分钟检测一次</span></div>
+        <div id="deploys" class="list"></div>
+      </section>
+      <section class="panel" aria-labelledby="services-title">
+        <div class="panel-head"><h2 id="services-title">服务</h2><span class="panel-note">按进程记录核对</span></div>
+        <div id="services" class="list"></div>
+      </section>
+    </div>
+
+    <footer class="footer">本页只读：不会触发模型或派发，也不会写入任何运营数据。</footer>
+  </main>
+  <script nonce="__CSP_NONCE__">
+  (() => {
+    'use strict';
+    const POLL_MS = 20000;
+    const SCHEMA = 2;
+    const SVG = 'http://www.w3.org/2000/svg';
+    const ROLE_KEYS = ['coordinator', 'work', 'uvox', 'life', 'quant', 'intelligence'];
+    const ROLE_NAMES = __ROLE_NAMES__;
+    const ORIGIN = { discord: 'Discord', coordinator: '总理派发', input: '输入台' };
+    const REQUEST_STATE = {
+      pending: ['待处理', 'blue'], running: ['运行中', 'blue'], blocked: ['受阻', 'bad'],
+      needs_attention: ['需要你处理', 'warn'], queued_only: ['仅入队·不调用模型', ''], answered: ['已回复', 'ok'],
+    };
+    const DEPUTY_STATE = { running: ['运行中', 'blue'], idle: ['空闲', ''] };
+    const SERVICE_NAMES = { input: '输入台', backup: '备份', discord: 'Discord 网关' };
+    const SERVICE_STATE = { running: ['运行中', 'ok'], stopped: ['已停止', 'bad'], missing: ['未登记', ''], unknown: ['状态未知', 'warn'] };
+    const FILE_STATE = { missing: '未找到', unreadable: '无法读取', invalid: '格式无效', unknown_schema: '格式未识别', error: '读取出错', empty: '暂无记录' };
+
+    const $ = (id) => document.getElementById(id);
+    const known = (value) => value !== null && value !== undefined;
+    function el(tag, cls, text) {
+      const node = document.createElement(tag);
+      if (cls) node.className = cls;
+      if (known(text)) node.textContent = String(text);
+      return node;
+    }
+    function add(parent, ...children) {
+      for (const child of children) if (child) parent.append(child);
+      return parent;
+    }
+    function fill(id, nodes, emptyText) {
+      $(id).replaceChildren(...(nodes.length ? nodes : [el('p', 'empty', emptyText || '暂无记录。')]));
+    }
+    function svg(tag, attrs, parent, text) {
+      const node = document.createElementNS(SVG, tag);
+      for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
+      if (known(text)) node.textContent = String(text);
+      if (parent) parent.append(node);
+      return node;
+    }
+    function badge(text, tone) { return el('span', tone ? `badge ${tone}` : 'badge', text); }
+    function time(iso) {
+      const date = new Date(iso || '');
+      if (!iso || Number.isNaN(date.getTime())) return '时间未知';
+      return date.toLocaleString('zh-CN', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+    const clock = (ms) => new Date(ms).toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' });
+    function span(seconds) {
+      if (!known(seconds)) return '未知';
+      const s = Math.round(Math.abs(seconds));
+      if (s < 60) return `${s} 秒`;
+      if (s < 3600) return `${Math.floor(s / 60)} 分钟`;
+      if (s < 86400) return `${Math.floor(s / 3600)} 小时 ${Math.floor((s % 3600) / 60)} 分`;
+      return `${Math.floor(s / 86400)} 天 ${Math.floor((s % 86400) / 3600)} 小时`;
+    }
+    const ago = (seconds) => (known(seconds) ? `${span(seconds)}前` : '时间未知');
+    const pct = (value) => (known(value) ? `${Math.round(value * 10) / 10}%` : '未知');
+    const roleName = (key) => ROLE_NAMES[key] || key || '角色未知';
+    function sourceName(source) {
+      if (source === 'sampler') return '采样器';
+      if ((source || '').startsWith('deputy:')) return `${roleName(source.slice(7))}运行后`;
+      return source || '来源未标明';
+    }
+    // Server clock of the snapshot, so the "now" marker does not depend on this device's clock.
+    function serverNow(s) {
+      const at = Date.parse(s.generated_at_utc || '');
+      return Number.isNaN(at) ? Date.now() : at;
+    }
+    function row(badges, title, meta) {
+      const item = el('div', 'row');
+      add(item, add(el('div', 'row-head'), ...badges), title ? el('div', 'row-title', title) : null);
+      const parts = meta.filter(Boolean);
+      if (parts.length) item.append(el('div', 'row-meta', parts.join(' · ')));
+      return item;
+    }
+
+    function renderHeadline(s) {
+      const u = s.usage || {};
+      const latest = u.latest;
+      const w = u.window;
+      let text;
+      if (s.scheduler_registered === false) {  // no scheduler here, so no usage to speak of: say what the page is for
+        $('headline').textContent = '还没有任务在跑。你的任务会出现在下面的各线计划里。';
+        $('headline-note').textContent = `数据读取于 ${time(s.generated_at_utc)}`;
+        return;
+      }
+      if (!latest || !w) text = '暂无五小时窗口用量观测';
+      else if (w.ended) text = `上一个五小时窗口已结束（最后观测 ${pct(latest.pct)}），新窗口暂无观测`;
+      else if (latest.pct >= u.ceiling_pct) text = `已达硬上限：五小时窗口已用 ${pct(latest.pct)}`;
+      else if (latest.pct >= u.pause_pct) text = `后台工作已停止：五小时窗口已用 ${pct(latest.pct)}`;
+      else {
+        const diff = Math.round(latest.pct - latest.baseline_pct);
+        text = `五小时窗口已用 ${pct(latest.pct)}，` + (diff === 0 ? '与线性基线持平'
+          : `${diff > 0 ? '高于' : '低于'}线性基线 ${Math.abs(diff)} 个百分点`);
+      }
+      $('headline').textContent = text;
+      $('headline-note').textContent = `后台工作在五小时窗口 ${u.pause_pct ?? 80}% 时停止，${u.ceiling_pct ?? 90}% 为硬上限 · 数据读取于 ${time(s.generated_at_utc)}`;
+    }
+
+    function renderSupervisor(s) {
+      const registered = s.scheduler_registered !== false;  // no supervisor record and no tick-log: one line under "For you" instead of the card
+      $('supervisor-panel').hidden = !registered;
+      $('scheduler-hint').hidden = registered;
+      if (!registered) return;
+      const status = s.supervisor || {};
+      const lag = Number.isInteger(status.behind_merges) ? status.behind_merges : null;
+      const behind = lag !== null && lag > 0;
+      const label = $('supervisor-status');
+      label.textContent = behind ? `落后 ${lag} 个合并提交` : lag === 0 ? '已与 master 同步' : '查不到';
+      label.className = `badge ${behind ? 'warn' : lag === 0 ? 'ok' : 'warn'}`;
+      const note = [status.started_at ? `启动 ${eastern(status.started_at)}` : '启动时间未知',
+        status.loaded_commit ? `加载提交 ${status.loaded_commit.slice(0, 12)}` : '加载提交未知',
+        status.current_commit ? `当前 master ${status.current_commit.slice(0, 12)}` : '当前 master 未知',
+        lag === null ? '间隔未知' : `中间隔了 ${lag} 个合并提交`];
+      if (behind) note.push('下次无 lane 锁时重启');
+      $('supervisor-note').textContent = note.join(' · ');
+    }
+
+    function drawChart(s) {
+      const box = $('usage-chart');
+      const u = s.usage || {};
+      const w = u.window;
+      if (!w || !(w.points || []).length) {
+        box.replaceChildren(el('p', 'empty', ['ok', 'empty', 'missing'].includes(u.state || 'missing')
+          ? '暂无观测。采样器或副总理写入用量记录后显示曲线。' : `用量记录${FILE_STATE[u.state] || '不可用'}，暂无观测。`));
+        return;
+      }
+      const start = Date.parse(w.start_utc);
+      const end = Date.parse(w.end_utc);
+      const now = serverNow(s);
+      const W = Math.max(280, Math.floor(box.clientWidth));
+      const H = W < 520 ? 210 : 250;
+      const m = { l: 38, r: 12, t: 18, b: 26 };
+      const x = (t) => m.l + ((Math.min(end, Math.max(start, t)) - start) / (end - start)) * (W - m.l - m.r);
+      const y = (p) => m.t + (1 - Math.min(100, Math.max(0, p)) / 100) * (H - m.t - m.b);
+      const latest = u.latest || {};
+      const root = svg('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img',
+        'aria-label': `五小时窗口 ${clock(start)}–${clock(end)}：最新实测 ${pct(latest.pct)}，同一时刻线性基线 ${pct(latest.baseline_pct)}，共 ${w.points.length} 次观测` });
+      for (const p of [0, 50, 100]) {
+        svg('line', { x1: m.l, x2: W - m.r, y1: y(p), y2: y(p), class: p ? 'u-grid' : 'u-axis' }, root);
+        svg('text', { x: m.l - 6, y: y(p) + 4, 'text-anchor': 'end', class: 'u-label' }, root, `${p}%`);
+      }
+      const hours = Math.round((end - start) / 3600000);
+      for (let h = 0; h <= hours; h += 1) {
+        const tx = x(start + h * 3600000);
+        svg('line', { x1: tx, x2: tx, y1: H - m.b, y2: H - m.b + 4, class: 'u-axis' }, root);
+        svg('text', { x: tx, y: H - 8, 'text-anchor': h === 0 ? 'start' : h === hours ? 'end' : 'middle', class: 'u-label' },
+          root, clock(start + h * 3600000));
+      }
+      for (const [p, label, cls] of [[u.ceiling_pct, '硬上限', 'u-ceiling'], [u.pause_pct, '后台停止', 'u-pause']]) {
+        svg('line', { x1: m.l, x2: W - m.r, y1: y(p), y2: y(p), class: cls }, root);
+        svg('text', { x: m.l + 4, y: y(p) - 4, class: 'u-label' }, root, `${p}% ${label}`);
+      }
+      svg('line', { x1: x(start), y1: y(0), x2: x(end), y2: y(u.pause_pct), class: 'u-base' }, root);
+      let nx = null;
+      if (!w.ended && now > start && now < end) {
+        nx = x(now);
+        svg('line', { x1: nx, x2: nx, y1: m.t, y2: H - m.b, class: 'u-now' }, root);
+        svg('text', { x: nx, y: m.t - 5, 'text-anchor': nx > W - 40 ? 'end' : 'middle', class: 'u-label' }, root, '现在');
+      }
+      const pts = w.points.map((p) => [x(Date.parse(p.at_utc)), y(p.pct), p]);
+      if (pts.length > 1) svg('polyline', { points: pts.map(([a, b]) => `${a.toFixed(1)},${b.toFixed(1)}`).join(' '), class: 'u-obs' }, root);
+      for (const [a, b, p] of pts) {
+        const g = svg('g', {}, root);
+        svg('circle', { cx: a, cy: b, r: 10, class: 'u-hit' }, g);
+        svg('circle', { cx: a, cy: b, r: 4, class: 'u-dot' }, g);
+        svg('title', {}, g, `${clock(Date.parse(p.at_utc))} · ${pct(p.pct)} · ${sourceName(p.source)}`);
+      }
+      // Latest value sits right of the "now" line so the line never crosses it.
+      const [lx, ly, lp] = pts[pts.length - 1];
+      const vx = Math.max(lx, nx ?? lx) + 7;
+      const fits = vx < W - m.r - 36;
+      svg('text', { x: fits ? vx : lx - 8, y: ly + 4, 'text-anchor': fits ? 'start' : 'end', class: 'u-value' }, root, pct(lp.pct));
+      box.replaceChildren(root);
+    }
+
+    function renderUsage(s) {
+      $('usage-panel').hidden = s.scheduler_registered === false;  // the usage curve needs the scheduler's sampler
+      if (s.scheduler_registered === false) return;
+      const u = s.usage || {};
+      const w = u.window;
+      const latest = u.latest;
+      drawChart(s);
+      const key = (cls, text) => add(el('li'), el('span', `key ${cls}`), el('span', null, text));
+      $('usage-legend').replaceChildren(key('key-obs', '实测用量'), key('key-base', `线性基线（窗口结束时到 ${u.pause_pct ?? 80}%）`),
+        key('key-pause', `${u.pause_pct ?? 80}% 后台停止`), key('key-ceiling', `${u.ceiling_pct ?? 90}% 硬上限`), key('key-now', '现在'));
+      const note = $('usage-note');
+      note.replaceChildren(...(latest ? [badge(latest.stale ? `可能过期 · ${ago(latest.age_seconds)}观测` : `${ago(latest.age_seconds)}观测`,
+        latest.stale ? 'warn' : 'ok'), el('span', null, ` ${sourceName(latest.source)}`)] : [badge('暂无观测', 'warn')]));
+      if (w) {
+        const left = Math.round((Date.parse(w.end_utc) - serverNow(s)) / 1000);
+        $('usage-foot').textContent = `账户整体用量 · 窗口 ${time(w.start_utc)} – ${time(w.end_utc)} · `
+          + (w.ended ? '该窗口已结束，下一次观测后显示新窗口' : `${span(left)}后重置`);
+      } else {
+        $('usage-foot').textContent = '账户整体用量；未知不等于 0。';
+      }
+      fill('usage-history', (u.history || []).map((h) => row([], null,
+        [`${time(h.end_utc)} 结束`, `最后观测 ${pct(h.final_pct)}`, `峰值 ${pct(h.peak_pct)}`, `${h.samples} 次观测`])),
+        '暂无已结束窗口的记录。');
+    }
+
+    function deputyCard(r) {
+      const box = el('article', r.enabled ? 'card' : 'card inactive');
+      if (!r.enabled) {
+        add(box, add(el('div', 'card-head'), el('h3', null, roleName(r.key)), badge('尚未运行')), el('p', 'meta', '常驻会话会在它第一次规划、审查或写日报时建立。'));
+        return box;
+      }
+      const [label, tone] = DEPUTY_STATE[r.status] || [r.status || '状态未知', 'warn'];
+      const last = r.last;
+      const lastBadge = last && (last.ok === true ? badge('上次成功', 'ok') : last.ok === false ? badge('上次失败', 'bad') : badge('上次结果未知', 'warn'));
+      add(box, add(el('div', 'card-head'), el('h3', null, roleName(r.key)), badge(label, tone), lastBadge));
+      const c = r.current;
+      if (c) {
+        box.append(el('p', null, `当前：${c.preview || '（无预览）'}`),
+          el('p', 'meta', [c.origin ? `来自 ${ORIGIN[c.origin] || c.origin}` : null, `已运行 ${span(c.elapsed_seconds)}`].filter(Boolean).join(' · ')));
+      }
+      if (last) {
+        box.append(el('p', 'meta', [`上次完成 ${time(last.finished_utc)}`, known(last.elapsed_seconds) ? `耗时 ${span(last.elapsed_seconds)}` : null].filter(Boolean).join(' · ')));
+        if (last.summary) box.append(el('p', null, last.summary));
+      } else if (!c) {
+        box.append(el('p', 'meta', '尚无完成记录。'));
+      }
+      box.append(el('p', 'meta', `累计运行 ${known(r.runs) ? r.runs : '未知'} 次`));
+      return box;
+    }
+
+    function renderDeputies(s) {
+      const d = s.deputies || {};
+      const all = d.roles || ROLE_KEYS.map((key) => ({ key, enabled: false }));
+      const roles = all.filter((r) => r.key !== 'coordinator');  // the coordinator is not a deputy
+      const coord = all.find((r) => r.key === 'coordinator');
+      if (d.state === 'ok') {
+        $('deputies-note').textContent = d.updated_utc ? `状态文件更新于 ${time(d.updated_utc)}` : '';
+        const coordLine = coord && coord.enabled
+          ? `总理的组织线会话：${coord.last ? `上次完成 ${time(coord.last.finished_utc)}` : '尚无完成记录'} · 累计运行 ${known(coord.runs) ? coord.runs : '未知'} 次`
+          : '总理的组织线会话：尚未运行（会在组织线第一次规划、审查或 09:00、21:00 日报时建立）';
+        fill('deputies', [add(el('div', 'cards'), ...roles.map(deputyCard)), el('p', 'meta', coordLine)]);
+        return;
+      }
+      $('deputies-note').textContent = '';
+      const missing = !d.state || d.state === 'missing';
+      fill('deputies', [
+        el('p', missing ? 'callout' : 'callout warn', missing ? '常驻副总理：尚未启用（等待你授权）'
+          : `常驻副总理状态文件${FILE_STATE[d.state] || '不可用'}，各角色状态未知。`),
+        add(el('div', 'role-row'), ...roles.map((r) => add(el('span', 'role off'), el('span', 'role-name', roleName(r.key)),
+          badge(missing ? '未启用' : '未知', missing ? '' : 'warn')))),
+      ]);
+    }
+
+    const openPlans = new Set();  // keys of the folds the owner opened, kept across the 20 s refresh
+    function shortTitle(text) {
+      const m = /^(.{8,60}?)[：:。；（(]/u.exec(text);
+      return m ? m[1] : text.length > 60 ? `${text.slice(0, 60)}…` : text;
+    }
+    function foldable(cls, key) {
+      const box = el('details', cls);
+      box.dataset.key = key;
+      box.open = openPlans.has(key);
+      return box;
+    }
+    function planItem(roleKey, it, marks, note) {
+      const text = it.text || '（无内容）';
+      const title = shortTitle(text);
+      const head = [it.owner ? badge('你的指令', 'blue') : null, ...marks];
+      if (title === text && !note) return add(el('div', 'item'), add(el('div', 'item-head'), ...head, el('span', 'item-title', text)));
+      return add(foldable('item', `${roleKey}|${text}`), add(el('summary'), ...head, el('span', 'item-title', title)),
+        note ? el('p', 'item-full', note) : null, el('p', 'item-full', text));
+    }
+    function planCard(p, deputy) {
+      const waits = (it) => (it.detail || '').includes('等你');
+      const waiting = p.blocked.filter(waits).length;
+      const live = deputy && deputy.current ? 1 : 0;
+      const box = foldable('plan', p.key);
+      add(box, add(el('summary'),
+        el('span', 'plan-name', `${roleName(p.key)} · ${p.section}`),
+        known(p.weight_pct) ? badge(`权重 ${p.weight_pct}%`) : null,
+        badge(`运行 ${p.running.length + live}`, p.running.length + live ? 'blue' : ''),
+        p.review.length ? badge(`待验收 ${p.review.length}`, 'blue') : null,
+        badge(`待办 ${p.todo.length}`),
+        waiting ? badge(`等你 ${waiting}`, 'warn') : null,
+        p.blocked.length > waiting ? badge(`其他受阻 ${p.blocked.length - waiting}`) : null));
+      const body = el('div', 'plan-body');
+      if (p.weight_note) body.append(el('p', 'plan-note', p.weight_note));
+      const running = [
+        live ? planItem(p.key, { text: deputy.current.preview || '（无预览）' }, [badge(p.key === 'coordinator' ? '总理会话' : '副总理会话', 'blue')]) : null,
+        ...p.running.map((it) => planItem(p.key, it, [badge(it.detail ? `执行中 · ${it.detail} 起` : '执行中', 'blue')])),
+      ].filter(Boolean);
+      add(body, el('h4', null, '正在运行'), running.length ? add(el('div'), ...running) : el('p', 'empty', '没有正在运行的任务。'));
+      if (p.review.length) {
+        add(body, el('h4', null, '待验收（下一步先验收这些）'), add(el('div'), ...p.review.map((it) => planItem(p.key, it, []))));
+      }
+      add(body, el('h4', null, '接下来（同一项目按顺序做，不同项目最多 2 个同时跑）'), p.todo.length
+        ? add(el('ol', 'steps'), ...p.todo.map((it) => add(el('li'), planItem(p.key, it, [it.project ? badge(PROJECT_NAMES[it.project] || it.project) : null]))))
+        : el('p', 'empty', '暂无待办；轮到这条线时会自动补充规划。'));
+      if (p.blocked.length) {
+        add(body, el('h4', null, '受阻 / 等你'), add(el('div'), ...p.blocked.map((it) => {
+          const reason = it.detail || '受阻';
+          const short = (/^[^，；（(]{1,16}/u.exec(reason) || [reason])[0];
+          return planItem(p.key, it, [badge(short, waits(it) ? 'warn' : '')], short === reason ? null : `原因：${reason}`);
+        })));
+      }
+      body.append(el('p', 'plan-note', `已完成 ${p.done_count} 条`));
+      box.append(body);
+      return box;
+    }
+
+    function renderPlans(s) {
+      const p = s.plans;
+      $('plans-note').textContent = p && p.state === 'ok' ? `来自 projects/backlog.md · 更新于 ${time(p.updated_utc)}` : '';
+      if (!p) { fill('plans', [], '输入服务重启后显示各线计划。'); return; }
+      if (p.state !== 'ok') { fill('plans', [], `待办清单${FILE_STATE[p.state] || '不可用'}，各线计划未知。`); return; }
+      const deputies = new Map(((s.deputies || {}).roles || []).map((r) => [r.key, r]));
+      fill('plans', (p.roles || []).map((plan) => planCard(plan, deputies.get(plan.key))), '暂无计划。');
+    }
+
+    const PROJECT_NAMES = { uvox: 'Uvox', umba: 'Umba', input: '输入台', quant: '量化', incore: '组织（incore）', jianzhixin: '项目七',
+      driving: '驾校模拟器', thesis: '论文', intel: '情报', jobs: '求职', website: 'Arbitros 官网', beaconlistener: 'Beacon Listener 官网', writing: '自媒体',
+      fieldlistener: 'Field Observer', delta: 'Delta', thinking: 'Thinking Engines', handover: '技术资产交接', umzy: 'Umzy', signlang: '手语', fos: 'FOS',
+      factoryalign: 'FactoryAlign', kiki: 'Kiki', general: '通用（本线杂项）' };
+    const AGENT_STATE = { running: ['运行中', 'blue'], review: ['等副总理反馈', 'warn'], todo: ['有任务排队', ''],
+      blocked: ['受阻/等你', 'warn'], idle: ['空闲', ''], unstarted: ['未启动', ''] };
+    function fact(list, label, value) {
+      if (known(value) && value !== '') add(list, el('dt', null, label), el('dd', null, value));
+    }
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+      return new Promise((resolve, reject) => {  // plain-http page: select a temporary textarea instead
+        const box = el('textarea');
+        box.value = text;
+        box.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+        document.body.append(box);
+        box.select();
+        try { document.execCommand('copy') ? resolve() : reject(new Error('copy refused')); } catch (err) { reject(err); } finally { box.remove(); }
+      });
+    }
+    function commandBox(command, none) {
+      if (!command) return el('span', 'muted', none);
+      const btn = el('button', 'copy-btn', '复制');
+      btn.type = 'button';
+      btn.title = '复制这条命令，粘贴到终端运行';
+      let timer = null;
+      btn.addEventListener('click', () => {
+        copyText(command).then(() => { btn.textContent = '已复制 ✓'; btn.className = 'copy-btn done'; },
+          () => { btn.textContent = '复制失败，请手动选中'; btn.className = 'copy-btn fail'; });
+        clearTimeout(timer);
+        timer = setTimeout(() => { btn.textContent = '复制'; btn.className = 'copy-btn'; }, 2500);
+      });
+      return add(el('div', 'cmd'), el('code', null, command), btn);
+    }
+    function agentRow(roleKey, a) {
+      const [label, tone] = a.terminal ? ['运行中 · 终端会话', 'blue'] : AGENT_STATE[a.status] || [a.status, 'warn'];
+      const box = foldable('item agent', `ag|${roleKey}|${a.project}`);
+      add(box, add(el('summary'), el('span', 'item-title', PROJECT_NAMES[a.project] || a.project), badge(label, tone),
+        a.review ? badge(`待验收 ${a.review}`) : null, a.todo ? badge(`待办 ${a.todo}`) : null));
+      const facts = el('dl', 'agent-facts');
+      fact(facts, '目录', a.folder);
+      fact(facts, '会话', a.session || '尚未建立');
+      fact(facts, '运行次数', a.runs);
+      fact(facts, '上下文', known(a.context_tokens) ? `${a.context_tokens.toLocaleString('zh-CN')} tokens` : null);
+      if (a.status === 'running') fact(facts, '当前任务', `${a.task || '（无预览）'}${a.started_utc ? `（${time(a.started_utc)} 开始）` : ''}`);
+      else if (a.task) fact(facts, '上次任务', `${a.task}${a.finished_utc ? `（${time(a.finished_utc)} 完成${a.exit_code ? `，退出码 ${a.exit_code}` : ''}）` : ''}`);
+      fact(facts, '等待验收', `${a.review} 条`);
+      fact(facts, '排队待办', `${a.todo} 条`);
+      if (a.blocked) fact(facts, '受阻/等你', `${a.blocked} 条`);
+      fact(facts, '一次通过率', known(a.first_pass_rate) ? `${Math.round(a.first_pass_rate * 100)}%（已验收 ${known(a.reviewed) ? a.reviewed : '?'} 次）` : null);
+      add(facts, el('dt', null, '对话命令'), add(el('dd'), commandBox(a.command, '还没有会话，第一次派活后才能对话')));
+      box.append(facts);
+      return box;
+    }
+    function agentLine(r) {
+      const box = foldable('plan', `ag|${r.key}`);
+      const c = r.counts || {};
+      const mark = (n, text, tone) => (n ? badge(`${text} ${n}`, tone) : null);
+      add(box, add(el('summary'),
+        el('span', 'plan-name', r.key === 'coordinator' ? roleName(r.key) + ' · ' + r.section : roleName(r.key)),
+        badge(r.running ? `运行中${r.kind ? ` · ${r.kind}` : ''}` : '空闲', r.running ? 'blue' : ''),
+        el('span', 'muted small', `${r.agents.length} 个 agent：`),
+        mark(c.running, '运行', 'blue'), mark(c.review, '等反馈', 'warn'), mark(c.todo, '排队'), mark(c.blocked, '受阻', 'warn'),
+        mark(c.idle, '空闲'), mark(c.unstarted, '未启动')));
+      const body = el('div', 'plan-body');
+      if (r.running && r.preview) body.append(el('p', 'plan-note', `${roleName(r.key)}当前：${r.preview}`));
+      add(body, add(el('dl', 'agent-facts'), el('dt', null, '对话命令'),
+        add(el('dd'), commandBox(r.command, '还没有会话，第一次规划、审查或写日报后才能对话'))));
+      add(body, r.agents.length ? add(el('div', 'agents-list'), ...r.agents.map((a) => agentRow(r.key, a)))
+        : el('p', 'empty', '这条线下还没有项目 agent。'));
+      box.append(body);
+      return box;
+    }
+    function renderAgents(s) {
+      const a = s.agents;
+      if (!a) { fill('agents', [], '输入服务重启后显示各线 agent。'); return; }
+      if (a.state !== 'ok') { fill('agents', [], `副总理状态文件${FILE_STATE[a.state] || '不可用'}，各 agent 状态未知。`); return; }
+      fill('agents', (a.roles || []).map(agentLine), '暂无 agent。');
+    }
+
+    function requestRow(r) {
+      const [label, tone] = REQUEST_STATE[r.status] || [r.status || '状态未知', 'warn'];
+      const done = r.status === 'answered';
+      return row([badge(label, tone), badge(roleName(r.role)), badge(ORIGIN[r.origin] || '来源未知')], r.preview || '（无原文预览）', [
+        `收到 ${time(r.received_utc)}`,
+        `${done ? '回复' : '更新'} ${time(r.updated_utc)}`,
+        r.next_attempt_utc ? `下次重试 ${time(r.next_attempt_utc)}` : null,
+        r.detail,
+      ]);
+    }
+
+    function renderQueue(s) {
+      const q = s.queue || {};
+      if (q.state !== 'ok') {
+        const text = q.state === 'missing' ? 'Discord 数据库未找到，队列未知。' : `Discord 数据库${FILE_STATE[q.state] || '不可用'}，队列未知。`;
+        $('queue-note').textContent = '';
+        fill('queue-open', [], text);
+        fill('queue-answered', [], '未知。');
+        return;
+      }
+      const counts = q.counts || {};
+      const open = Object.entries(counts).filter(([status]) => status !== 'answered').reduce((sum, [, n]) => sum + n, 0);
+      $('queue-note').textContent = `未完成 ${open} · 已回复 ${counts.answered || 0}`;
+      fill('queue-open', (q.open || []).map(requestRow), '当前没有待处理的请求。');
+      fill('queue-answered', (q.answered || []).map(requestRow), '暂无已回复的请求。');
+    }
+
+    function renderServices(s) {
+      fill('services', (s.services || []).map((svc) => {
+        const [label, tone] = SERVICE_STATE[svc.state] || ['状态未知', 'warn'];
+        return row([el('span', 'row-title', SERVICE_NAMES[svc.key] || svc.key), badge(label, tone)], null, [
+          svc.state === 'missing' ? '没有进程记录文件' : null,
+          known(svc.pid) ? `pid ${svc.pid}` : null,
+          svc.started_utc ? `记录启动 ${time(svc.started_utc)}` : null,
+        ]);
+      }), '服务状态未知。');
+    }
+
+    const ONLINE = { online: ['在线', 'ok'], password: ['在线·带密码', 'ok'], down: ['离线', 'bad'], checking: ['检测中', ''] };
+    function eastern(iso) {
+      if (!iso) return '时间未知';
+      if (iso.length <= 10) return `${iso}（美东，时刻未记）`;
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return '时间未知';
+      return `${date.toLocaleString('zh-CN', { hour12: false, timeZone: 'America/New_York', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })} 美东`;
+    }
+    function gapText(gap) {
+      if (!gap || gap.state === 'norepo') return '无仓库，无新版本可比';
+      if (gap.state !== 'ok') return '新版本：查不到（仓库或分支找不到）';
+      if (!gap.behind) return `已是该分支最新（${gap.head}）`;
+      return `有未部署的新提交：落后 ${gap.behind} 个 · 最新 ${gap.head}，${time(gap.head_at_utc)}，${gap.head_title || ''}`;
+    }
+    function renderProjectDelivery(s) {
+      const d = s.project_delivery || {};
+      $('delivery-panel').hidden = d.state !== 'ok' && !(d.projects || []).length;  // an instance with no delivery check has no card
+      if (d.state !== 'ok') {
+        $('delivery-note').textContent = '';
+        fill('project-delivery', [], `交付数据${FILE_STATE[d.state] || '尚未生成'}；下一次复盘刷新。未知不是 0。`);
+        return;
+      }
+      $('delivery-note').textContent = `${d.stale ? '数据已过期 · ' : ''}核对 ${time(d.generated_at_utc)} · 每 8 小时复盘刷新`;
+      fill('project-delivery', (d.projects || []).map((p) => row([
+        el('span', 'row-title', p.name || p.key),
+        badge(known(p.days_since_delivery) ? `距交付 ${p.days_since_delivery} 天` : p.delivery_state === 'never' ? '无交付记录' : '交付未知', p.age_exceeded ? 'bad' : ''),
+        badge(known(p.approved_unmerged) ? `过审未合 ${p.approved_unmerged} 条` : '待合数未知', p.pause_new_drafts ? 'warn' : ''),
+        p.age_exceeded ? badge('交付超线', 'bad') : null,
+        p.pause_new_drafts ? badge('暂停新草样', 'warn') : null,
+      ], null, [p.last_delivery ? `上次交付 ${p.last_delivery} · ${p.delivery_source || ''}` : '未找到交付凭据', ...(p.issues || [])])), '暂无项目记录。');
+    }
+    function renderTimedRows(s) {
+      const missed = (s.timed_rows || {}).missed || [];
+      $('timed-rows-panel').hidden = !missed.length;
+      fill('timed-rows', missed.map((r) => row([
+        badge('待执行', 'bad'), el('span', 'row-title', r.message),
+      ], null, [`${r.window_date} · ${r.section} · ${r.item}`])), '');
+    }
+    function renderMachine(s) {
+      const m = s.machine || {};
+      const lines = (m.anomalies || []).map((a) => row([badge('持续异常', 'bad'), el('span', 'row-title', a.detail)], null, []));
+      if (m.state === 'stale') lines.push(row([badge('取样停了', 'warn'), el('span', 'row-title', '机器取样超过 30 分钟没有新记录（调度器没在跑？）')], null, []));
+      $('machine-panel').hidden = !lines.length;
+      $('machine-note').textContent = m.at ? `最新取样 ${time(m.at)} · 每 10 分钟` : '';
+      fill('machine', lines, '');
+    }
+    function renderDeploys(s) {
+      const d = s.deployments || {};
+      if (d.state !== 'ok') { fill('deploys', [], d.state === 'missing' ? '还没有部署登记文件。' : '暂无部署记录。'); return; }
+      fill('deploys', d.products.map((p) => {
+        const [label, tone] = ONLINE[p.online] || ONLINE.checking;
+        const link = el('a', 'row-title', p.name);
+        link.href = p.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+        const item = row([link, badge(label, tone), badge(p.access === 'password' ? '密码访问' : '公开')], null, [
+          p.commit ? `版本 ${p.commit.slice(0, 7)}${p.branch ? ` · ${p.branch}` : ''}` : '无仓库版本',
+          `部署 ${eastern(p.deployed_at)}`,
+        ]);
+        item.append(el('div', p.gap && p.gap.behind ? 'row-meta warn-text' : 'row-meta', gapText(p.gap)));
+        item.append(el('div', 'row-meta', p.url));
+        return item;
+      }), '暂无部署记录。');
+    }
+
+    function renderReview(s) {
+      const r = s.review;
+      if (!r) return;
+      const link = (text, n, tone, href) => { const a = el('a', 'role'); a.href = href; return add(a, el('span', 'role-name', text), badge(String(n), n ? tone : '')); };
+      $('review-counts').replaceChildren(link('等你试用', r.trials, 'warn', '/todo'), link('最近报告', r.reports, 'blue', '/review/all'), link('已部署 demo', r.deployments, '', '/review/all'));
+    }
+
+    function renderAccumulation(data) {
+      const values = Object.fromEntries(data.metrics.map(m => [m.key, m.total]));
+      const quotes = Object.keys(values).filter(k => k.startsWith('quotes_'));
+      const complete = quotes.every(k => known(values[k]));
+      const hours = known(values.confirmed_hours) && known(values.unconfirmed_hours) ? values.confirmed_hours + values.unconfirmed_hours : null;
+      $('accumulation-panel').hidden = data.metrics.every(m => !m.total);  // nothing recorded yet (a fresh instance): no card
+      $('accumulation-summary').textContent = complete && known(hours)
+        ? `你已经留下 ${quotes.reduce((n, k) => n + values[k], 0).toLocaleString('zh-CN')} 条原话、${hours.toFixed(2)} 小时语音。`
+        : '原话和语音的数量还在统计，部分来源暂时读不出来。';
+      const missing = data.metrics.some(m => !known(m.total));
+      $('accumulation-status').textContent = `${missing ? '部分来源暂不可读 · ' : ''}${(data.warnings || []).join('；')}${data.warnings.length ? ' · ' : ''}${time(data.generated_at)} · 每 5 分钟统计`;
+      $('accumulation-metrics').replaceChildren(...data.metrics.map(m => {
+        const card = el('article', 'accumulation-card');
+        card.dataset.metric = m.key;
+        const value = el('div', 'accumulation-value', known(m.total) ? m.total.toLocaleString('zh-CN', { maximumFractionDigits: m.unit === '小时' ? 2 : 0, minimumFractionDigits: m.unit === '小时' ? 2 : 0 }) : '—');
+        add(value, el('small', '', m.unit));
+        add(card, el('h3', '', m.label), value);
+        if (known(m.total) && m.weekly.length) {
+          const chart = svg('svg', { viewBox: '0 0 160 48', role: 'img', 'aria-label': `${m.label}按周累计：${m.weekly.join('、')}${m.unit}` });
+          const max = Math.max(1, ...m.weekly);
+          svg('line', {x1: 4, y1: 43, x2: 156, y2: 43, class: 'u-grid'}, chart);
+          const points = m.weekly.map((v, i) => `${4 + i * 152 / Math.max(1, m.weekly.length - 1)},${43 - v * 37 / max}`);
+          svg('polyline', { points: points.join(' '), class: 'u-obs' }, chart);
+          m.weekly.forEach((v, i) => {
+            const [cx, cy] = points[i].split(',');
+            const dot = svg('circle', { cx, cy, r: 2.5, class: 'u-dot' }, chart);
+            svg('title', {}, dot, `${data.weeks[i]} 周：${v.toLocaleString('zh-CN', {maximumFractionDigits: 2})} ${m.unit}`);
+          });
+          const range = el('div', 'accumulation-range');
+          add(range, el('span', '', data.weeks[0].slice(5)), el('span', '', '按周累计'), el('span', '', data.weeks.at(-1).slice(5)));
+          add(card, chart, range);
+          if (m.undated) add(card, el('div', 'panel-note', `另有 ${m.undated.toLocaleString('zh-CN', {maximumFractionDigits: 2})} ${m.unit} 无可用日期`));
+        }
+        return card;
+      }));
+    }
+
+    let accumulationBusy = false;
+    async function loadAccumulation() {
+      if (accumulationBusy) return;
+      accumulationBusy = true;
+      try {
+        const response = await fetch('/api/accumulation', { signal: AbortSignal.timeout(30000), cache: 'no-store', credentials: 'same-origin' });
+        if (!response.ok) throw new Error(String(response.status));
+        renderAccumulation(await response.json());
+      } catch (err) {
+        $('accumulation-status').textContent = '统计暂不可读；已显示的数字保留，稍后重试。';
+      } finally { accumulationBusy = false; }
+    }
+
+    let last = null;
+    function render(snapshot) {
+      last = snapshot;
+      for (const draw of [renderReview, renderHeadline, renderSupervisor, renderUsage, renderDeputies, renderAgents, renderPlans, renderProjectDelivery, renderTimedRows, renderMachine, renderQueue, renderDeploys, renderServices]) {
+        try { draw(snapshot); } catch (err) { /* One bad section must not hide the others. */ }
+      }
+      $('sprint-link').hidden = !(snapshot.plans || {}).has_sprint;  // no sprint line in the task list: no sprint page link
+    }
+
+    // toggle does not bubble; a capture listener on the container sees every fold.
+    for (const id of ['plans', 'agents']) $(id).addEventListener('toggle', (event) => {
+      const key = event.target.dataset && event.target.dataset.key;
+      if (key && event.target.open) openPlans.add(key);
+      else if (key) openPlans.delete(key);
+    }, true);
+
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { if (last) try { drawChart(last); } catch (err) { /* keep the previous chart */ } }, 150);
+    });
+
+    let timer = null;
+    let busy = false;
+    let loaded = false;
+    async function load() {
+      if (busy) return;
+      busy = true;
+      const status = $('load-status');
+      try {
+        const response = await fetch('/api/organization', { signal: AbortSignal.timeout(10000), cache: 'no-store', credentials: 'same-origin', headers: { Accept: 'application/json' } });
+        if (!response.ok) throw new Error(String(response.status));
+        const snapshot = await response.json();
+        if (snapshot.schema_version !== SCHEMA) {
+          status.textContent = '看板页面已更新，输入服务重启后才会提供新数据。';
+          status.classList.add('error');
+          if (!loaded) $('headline').textContent = '等待输入服务重启';
+          return;
+        }
+        render(snapshot);
+        loaded = true;
+        status.textContent = `已刷新 ${time(new Date().toISOString())} · 页面可见时每 20 秒自动刷新`;
+        status.classList.remove('error');
+      } catch (err) {
+        status.textContent = loaded ? '读取失败；页面显示的是上一次成功读取的数据。' : '读取失败；稍后自动重试。';
+        status.classList.add('error');
+        if (!loaded) $('headline').textContent = '暂时读取不到组织状态';
+      } finally {
+        busy = false;
+      }
+    }
+    function schedule() {
+      clearTimeout(timer);
+      timer = document.visibilityState === 'visible' ? setTimeout(tick, POLL_MS) : null;
+    }
+    async function tick() {
+      loadAccumulation();
+      await load();
+      schedule();
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') tick();
+      else { clearTimeout(timer); timer = null; }
+    });
+    $('secretary-start').append(commandBox('wsl.exe -e /srv/wslhome/wsluser/.local/bin/codex -C /srv/orghome/orgcore_workspace -m __SECRETARY_MODEL__ -c model_reasoning_effort=medium -s workspace-write -a on-request -c sandbox_workspace_write.network_access=true "Read /srv/orghome/orgcore_workspace/incore/data/config-sync/private-layer/roles/codex-secretary.md in full if it exists; otherwise read /srv/orghome/orgcore_workspace/incore/control/roles/codex-secretary.md in full. You are the backup secretary described there. Follow it, reply in __SECRETARY_LANG__, then wait for the owner."'));
+    $('secretary-stop').append(commandBox("wsl.exe -e pkill -f 'codex -C /srv/orghome/orgcore_workspace -m __SECRETARY_MODEL__'"));
+    if (document.visibilityState === 'visible') tick();
+  })();
+  </script>
+</body>
+</html>

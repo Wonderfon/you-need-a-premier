@@ -1,0 +1,5 @@
+# Isolated WSL Python 3.12 environment only; no remote inference.
+faster-whisper==1.2.1
+ctranslate2==4.8.2
+nvidia-cublas-cu12==12.8.4.1
+nvidia-cudnn-cu12==9.10.2.21

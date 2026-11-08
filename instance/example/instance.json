@@ -1,0 +1,15 @@
+{
+  "_comment": "Copy to instance/instance.json and edit. Only workspace/user_home must be set to move the tree; the rest derive from them.",
+  "user_home": "C:\\orghome",
+  "workspace": "C:\\orghome\\orgcore_workspace",
+  "wsl_user": "wsluser",
+  "owner_name": "Demo Owner",
+  "owner_aliases": [
+    "demo-owner",
+    "Demo Owner",
+    "Demo01",
+    "Org Core"
+  ],
+  "owner_email": "owner@example.invalid",
+  "sender_email": "sender@example.invalid"
+}

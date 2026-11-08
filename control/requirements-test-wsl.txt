@@ -1,0 +1,2 @@
+# Validated with Python 3.12: the control unittest suite needs only the standard library.
+# Optional Playwright/Chromium rendering tests skip when those tools are absent.

@@ -1,0 +1,6 @@
+# Component: scheduler (control/tick.py, the "Org Core Coordinator Tick" task) -- no pip packages.
+# Interpreter: Windows Python 3.12.10, per-user install C:\orghome\AppData\Local\Programs\Python\Python312\pythonw.exe
+#   (the task XML runs that interpreter directly, no venv). Source on this machine: observed with `python --version` and the task XML
+#   control/scheduled-tasks/"Org Core Coordinator Tick.xml"; the installer is not kept in .runtime/installers.
+# The control test suite needs only the standard library (control/requirements-test-wsl.txt says the same).
+# External programs it launches: claude.exe (Claude Code, C:\orghome\.local\bin\claude.exe), git, wsl.exe + the Codex CLI (see codex-wsl.txt).

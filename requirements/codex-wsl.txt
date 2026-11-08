@@ -1,0 +1,4 @@
+# Component: Codex executor side (WSL Ubuntu). No pip packages needed to run it; the tools are programs inside WSL:
+#   Ubuntu 26.04.1 LTS (WSL2), python3 3.14.4, git 2.53.0, codex-cli 0.160.0 (~/.local/bin/codex), uv 0.12.19 (~/.local/bin/uv).
+# Test venvs are built on demand under ~/.cache/codex-sandbox/ from control/requirements-test-wsl.txt and input/requirements-test-wsl.txt.
+# Local source: `wsl -d Ubuntu` version commands, read 2026-11-05. (control/tick.py's comment still says codex-cli 0.157.0.)

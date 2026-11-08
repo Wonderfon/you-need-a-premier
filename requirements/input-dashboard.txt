@@ -1,0 +1,15 @@
+# Component: input station + dashboard (input/server.py, port 8765) and the owner pages. Same service venv as the gateway: discord\.venv.
+# Interpreter: Windows Python 3.12.10. Local source: `discord\.venv\Scripts\python.exe -m pip freeze` read 2026-11-05.
+# Only aiohttp is imported by the server (input/server.py); the rest is its dependency closure as installed.
+# input/requirements-test-wsl.txt pins aiohttp==3.14.5 for the WSL test venv; the production venv has 3.14.3, which the tests also pass on.
+# Optional, absent from production: pypinyin (only input/test_asr_bench.py), playwright + Chromium (page checks, md2png.py; kept in a separate env).
+aiohttp==3.14.3
+aiohappyeyeballs==2.7.1
+aiosignal==1.4.0
+attrs==26.1.0
+frozenlist==1.8.0
+idna==3.20
+multidict==6.9.1
+propcache==0.5.4
+typing_extensions==4.16.0
+yarl==1.25.1

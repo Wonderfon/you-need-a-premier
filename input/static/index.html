@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="__CSRF_TOKEN__">
+  <meta name="theme-color" content="#f7f8fa">
+  <title>本地输入台</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+  <script src="/static/rules.js" defer></script>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="本地输入台首页">本地输入台</a>
+      <span class="local-note">内容保存在本机 · <a href="/dashboard">组织看板</a></span>
+    </header>
+
+    <div class="asr-hours" aria-label="语音数据积累">
+      <p id="asr-hours">__ASR_HOURS__</p>
+      <p class="local-note">按有效确认稿估算，已排除固定评测集；开训前仍需校验音频。10 小时是规划参考，达到后不会自动开训。</p>
+    </div>
+
+    <section id="record-screen" class="screen" aria-labelledby="page-title">
+      <div class="capture">
+        <p class="eyebrow">DEMO01 · LOCAL</p>
+        <h1 id="page-title">把想法说下来</h1>
+        <p class="intro">录完自动转写，核对后复制到任何聊天或软件。</p>
+        <div id="wave-panel" class="wave-panel" hidden>
+          <canvas id="waveform" role="img" aria-label="实时麦克风音量波形"></canvas>
+          <div class="meter-line"><span id="record-time">00:00</span><span id="level-status">正在读取麦克风音量…</span></div>
+        </div>
+        <button id="record-toggle" class="record-button" type="button">开始录音</button>
+        <p id="record-status" class="live-status" role="status" aria-live="polite">录音会分段保存；刷新页面后可从历史记录恢复已保存片段。</p>
+        <p id="model-status" class="local-note" role="status">正在检查本地 Nano…</p>
+        <div id="quick-actions" class="quick-actions">
+          <button id="text-open" class="quiet-action" type="button">直接输入文字</button>
+          <button id="upload-open" class="quiet-action" type="button">上传音频</button>
+          <input id="audio-file" type="file" accept="audio/*,.webm,.m4a,.mp4" hidden>
+        </div>
+      </div>
+    </section>
+
+    <section id="text-screen" class="screen narrow-screen" aria-labelledby="text-heading" hidden>
+      <div class="screen-heading">
+        <button id="text-cancel" class="back-action" type="button">返回</button>
+        <h1 id="text-heading">直接输入文字</h1>
+      </div>
+      <label class="sr-only" for="text-input">要保存的原始文字</label>
+      <textarea id="text-input" class="entry-editor" placeholder="写下想法、记录或指令…" autofocus></textarea>
+      <div class="text-actions">
+        <span id="text-status" class="live-status" role="status" aria-live="polite"></span>
+        <button id="save-text" class="secondary-button" type="button">保存文字</button>
+      </div>
+    </section>
+
+    <section id="result-screen" class="screen result-screen" aria-labelledby="result-title" hidden>
+      <div class="result-heading">
+        <div>
+          <p class="eyebrow" id="result-kind">转写草稿</p>
+          <h1 id="result-title">正在准备文字…</h1>
+        </div>
+        <button id="new-recording" class="quiet-action" type="button">新录音</button>
+      </div>
+      <p id="llm-coverage-warning" class="live-status error" role="status" aria-live="polite" hidden></p>
+      <label class="sr-only" for="result-editor">可编辑的转写文字</label>
+      <textarea id="result-editor" class="result-editor" spellcheck="true" placeholder="转写完成后会显示在这里。原音已保存，转写状态会在此更新。" disabled></textarea>
+      <div class="result-actions">
+        <span id="save-status" class="live-status" role="status" aria-live="polite">等待转写…</span>
+        <button id="llm-original" class="quiet-action" type="button" hidden>看回原文</button>
+        <button id="llm-run" class="quiet-action" type="button" disabled>润色</button>
+        <button id="copy-primary" class="copy-button" type="button" disabled>复制文字</button>
+      </div>
+      <div id="verify-panel" class="verify-panel" hidden>
+        <fieldset class="purpose-choice">
+          <legend>这版文字的用途</legend>
+          <label><input type="radio" name="purpose" value="recognition_correction" checked>听写纠错：与原音逐字一致</label>
+          <label><input type="radio" name="purpose" value="user_rewrite">表达改写</label>
+          <label><input type="radio" name="purpose" value="other">其他修订</label>
+        </fieldset>
+        <button id="verify-revision" class="secondary-button" type="button">确认保存</button>
+        <span id="verify-status" class="live-status" role="status" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <details id="rules-panel" class="history-panel rules-panel">
+      <summary>规则：根据你的修改自动推荐 <span id="rules-badge" class="rules-badge"></span></summary>
+      <div class="rules-body">
+        <p class="rules-note">接受、删除、停用都会马上生效，只影响之后的新转写；旧记录和机器原文不会被改动。每一步都记在最下面的日志里，可以撤回。</p>
+        <h2 class="rules-heading">推荐</h2>
+        <div id="rules-suggestions"></div>
+        <details id="rules-near-panel" class="rule-evidence">
+          <summary>差一点的推荐 <span id="rules-near-count"></span></summary>
+          <p class="rules-note">这些改法在至少两段记录里出现，但有些地方你没这样改，未通过零误伤检查。展开看正反例，再决定是否加成规则；不会自动生效。</p>
+          <div id="rules-near"></div>
+        </details>
+        <h2 class="rules-heading">已生效的规则</h2>
+        <div id="rules-active"></div>
+        <p id="rules-version" class="rule-meta"></p>
+        <h2 class="rules-heading">手动添加</h2>
+        <div class="rule-form">
+          <label>听成<input id="rule-from" type="text" maxlength="60" autocomplete="off"></label>
+          <label>改成<input id="rule-to" type="text" maxlength="60" autocomplete="off"></label>
+          <button id="rule-add" class="secondary-button" type="button">添加规则</button>
+        </div>
+        <p id="rules-status" class="live-status" role="status" aria-live="polite"></p>
+        <h2 class="rules-heading">操作日志</h2>
+        <div id="rules-log"></div>
+      </div>
+    </details>
+
+    <details id="settings-panel" class="history-panel">
+      <summary>设置</summary>
+      <div class="rules-body">
+        <label><input id="llm-auto" type="checkbox">新转写默认润色</label>
+        <p id="llm-note" class="rules-note"></p>
+      </div>
+    </details>
+
+    <details id="history-panel" class="history-panel">
+      <summary>历史记录、原文与更多操作</summary>
+      <div class="history-tools">
+        <button id="refresh" class="quiet-action" type="button">刷新记录</button>
+        <a class="quiet-action" href="/api/instructions.json" download="explicit-instructions.json">导出待处理指令</a>
+      </div>
+      <nav id="session-list" class="session-list" aria-label="输入历史记录"></nav>
+      <div id="archive-detail" class="archive-detail"><p class="empty">历史记录和原始音频详情会显示在这里。</p></div>
+    </details>
+
+    <footer class="footer">
+      <p id="backup-status" role="status" aria-live="polite">正在读取备份状态…</p>
+      <p>录音不会自动变成任务指令。</p>
+    </footer>
+  </main>
+</body>
+</html>

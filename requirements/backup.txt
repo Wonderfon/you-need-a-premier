@@ -1,0 +1,3 @@
+# Component: backup (backup/backup.py --watch, started by start-services.ps1 in the service venv discord\.venv).
+# Standard library only (sqlite3, zipfile, hashlib). Needs git on PATH or the Codex runtime git (see docs/install-contract.md), Google
+# Drive for Desktop signed in (installer on this machine: .runtime/installers/GoogleDriveSetup.exe, 291173528 bytes).

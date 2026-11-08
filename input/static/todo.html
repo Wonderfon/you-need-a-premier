@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>要你的</title>
+  <style nonce="__CSP_NONCE__">
+    :root { --bg: #fff; --text: #171717; --muted: #555; --soft: #686868; --surface: #f5f6f8; --pale: #dce7ff;
+      --blue: #4268f6; --line: #d4d6db; --hair: #e6e8ec; --warn: #8a4b00; --warn-soft: #fff4e0;
+      --bad: #b42318; --bad-soft: #fef3f2; --ok: #1a6b3a; --ok-soft: #e8f6ee; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+      font: 15px/1.55 "Nunito Sans", system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    :focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+    .shell { max-width: 880px; margin: 0 auto; padding: 16px 16px 64px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px 12px;
+      padding-bottom: 12px; border-bottom: 1px solid var(--hair); }
+    .brand { font-weight: 700; color: var(--text); }
+    .muted { color: var(--muted); }
+    h1 { margin: 18px 0 6px; font-size: 24px; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
+    h2 { font-size: 18px; margin: 32px 0 2px; }
+    .status { font-size: 12.5px; color: var(--soft); margin: 4px 0 0; }
+    .status.error { color: var(--bad); font-weight: 700; }
+    .status button { min-height: 28px; padding: 1px 10px; font-size: 12.5px; }
+    .small { font-size: 12.5px; color: var(--soft); margin: 4px 0 0; }
+    .card { border: 1px solid var(--hair); border-radius: 14px; padding: 12px 16px; margin-top: 12px; background: #fff; min-width: 0; }
+    .card.urgent { border-left: 5px solid var(--bad); }
+    .card.compact { padding: 10px 14px; }
+    .card.gone { border-color: #b9dfc8; background: var(--ok-soft); }
+    .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; align-items: center; }
+    .badge { font-size: 12px; padding: 1px 9px; border-radius: 999px; background: var(--surface); color: var(--muted); }
+    .badge.code { font: 700 12.5px Consolas, "Cascadia Mono", monospace; background: var(--text); color: #fff; }
+    .badge.kind { background: var(--pale); color: #1f3aa8; font-weight: 700; }
+    .badge.line { background: var(--surface); color: var(--text); }
+    .badge.deadline { background: var(--bad-soft); color: var(--bad); font-weight: 700; }
+    .badge.blocks, .badge.stale { background: var(--warn-soft); color: var(--warn); font-weight: 700; }
+    .card h3 { margin: 2px 0 6px; font-size: 16px; font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; }
+    .field { margin: 4px 0; overflow-wrap: anywhere; }
+    .field b { color: var(--soft); font-weight: 700; font-size: 13px; margin-right: 6px; }
+    .rec b { color: var(--blue); }
+    .facts { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
+    .cmd { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 0; flex-wrap: wrap; }
+    .cmd code { flex: 1 1 200px; min-width: 0; display: block; background: var(--surface); padding: 6px 10px; border-radius: 8px;
+      font: 12.5px/1.45 Consolas, "Cascadia Mono", monospace; overflow-wrap: anywhere; }
+    a.open { display: inline-flex; align-items: center; min-height: 40px; padding: 6px 16px; border-radius: 10px;
+      background: var(--blue); color: #fff; font-weight: 700; }
+    a.open:hover { text-decoration: none; filter: brightness(1.08); }
+    button { font: inherit; cursor: pointer; border: 1px solid var(--line); background: #fff; color: var(--text);
+      border-radius: 10px; padding: 6px 14px; min-height: 40px; text-align: left; white-space: normal; }
+    button:hover { border-color: var(--blue); background: var(--surface); }
+    button:active { transform: translateY(1px); }
+    button.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 700; }
+    button.primary:hover { filter: brightness(1.08); background: var(--blue); }
+    button.ghost { border-style: dashed; color: var(--muted); }
+    button.chosen { background: var(--ok-soft); border-color: #7cc19a; color: var(--ok); font-weight: 700; }
+    button:disabled { opacity: .55; cursor: default; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+    input.note { flex: 1 1 200px; min-width: 0; font: inherit; padding: 6px 10px; border: 1px solid var(--line);
+      border-radius: 10px; min-height: 40px; }
+    .banner { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; color: var(--ok); font-weight: 700; }
+    .banner .what { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+    .err { margin: 8px 0 0; font-size: 13px; color: var(--bad); }
+    details { margin-top: 8px; }
+    summary { cursor: pointer; color: var(--soft); font-size: 13px; min-height: 28px; }
+    details.fold, section.fold { margin-top: 28px; border-top: 1px solid var(--hair); padding-top: 6px; }
+    .oldhead { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; }
+    .oldhead h2 { margin: 12px 0 2px; font-size: 18px; }
+    .confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; padding: 10px 12px; border: 1px solid var(--warn);
+      border-radius: 10px; background: var(--warn-soft); color: var(--warn); font-weight: 700; }
+    .confirm > span:first-child { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
+    .banner.batch { margin-top: 14px; padding: 10px 14px; border: 1px solid #b9dfc8; border-radius: 12px; background: var(--ok-soft); }
+    details.fold > summary { font-size: 16px; font-weight: 700; color: var(--text); padding: 8px 0; }
+    .card details p { margin: 6px 0 0; font-size: 13px; color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+    .empty { margin-top: 14px; color: var(--muted); }
+    .filters { position: sticky; top: 0; z-index: 5; background: var(--bg); display: flex; flex-wrap: wrap; gap: 6px;
+      padding: 10px 0; margin-top: 10px; border-bottom: 1px solid var(--hair); }
+    .filters button { min-height: 34px; padding: 2px 12px; border-radius: 999px; font-size: 14px; }
+    .filters button.on { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 700; }
+    .how { margin: 4px 0 0; font-size: 13px; color: var(--ok); overflow-wrap: anywhere; }
+    .foot { margin-top: 36px; font-size: 12.5px; color: var(--soft); overflow-wrap: anywhere; }
+    @media (max-width: 600px) {
+      h1 { font-size: 21px; }
+      button { min-height: 44px; }
+      a.open { min-height: 44px; }
+      .actions > button { flex: 1 1 100%; }
+      .actions > button.short { flex: 1 1 auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div><a class="brand" href="/todo">要你的</a><span class="muted"> · 等你决定页和待审页合并成这一页</span></div>
+      <div><a href="/dashboard">组织看板</a> · <a href="/review/all">资料库</a> · <a href="/">输入台</a></div>
+    </div>
+    <h1 id="headline">读取中…</h1>
+    <p class="status" id="status" role="status"></p>
+    <nav class="filters" id="filters" aria-label="按类别筛选"></nav>
+    <p class="small">每张卡一个编号（如 D12）。<b>定</b>：选一个选项；<b>做</b>：照命令做完点「做完了」；<b>看/试</b>：打开看，点用／没用／返工；<b>知道就行</b>：点「看过了」。在 Discord 或终端里直接回编号也算数。</p>
+    <section id="cards" aria-label="要你的"></section>
+    <div class="banner batch" id="batch-note" role="status" hidden></div>
+    <section class="fold" id="old-box" hidden>
+      <div class="oldhead">
+        <h2 id="old-title"></h2>
+        <button type="button" id="old-all">这一栏全部已经处理了</button>
+      </div>
+      <p class="small" id="old-note"></p>
+      <div class="confirm" id="old-confirm" hidden>
+        <span id="old-confirm-text"></span>
+        <button type="button" class="primary short" id="old-yes">确定</button>
+        <button type="button" class="short" id="old-no">取消</button>
+        <span class="err" id="old-err" hidden></span>
+      </div>
+      <details id="old-details">
+        <summary id="old-sum"></summary>
+        <div id="old"></div>
+      </details>
+    </section>
+    <section id="waiting-box" hidden>
+      <h2 id="waiting-head">已回复，等处理</h2>
+      <p class="small">已经写给对应的线，等它下次运行改原行；改完这一张才会消失。还没处理的可以撤回。</p>
+      <div id="waiting"></div>
+    </section>
+    <details class="fold" id="handled-box" hidden>
+      <summary id="handled-sum"></summary>
+      <div id="handled"></div>
+    </details>
+    <details class="fold" id="recent-box" hidden>
+      <summary id="recent-sum"></summary>
+      <p class="small" id="recent-note"></p>
+      <div id="recent"></div>
+    </details>
+    <p class="foot" id="foot"></p>
+  </div>
+  <script nonce="__CSP_NONCE__">
+    (() => {
+      'use strict';
+      const CSRF = '__CSRF_TOKEN__';
+      const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+      const $ = id => document.getElementById(id);
+      const KINDS = { D: '定', T: '做', V: '看/试', K: '知道就行' };
+      let data = null, filter = '', hold = 0, oldCodes = [], lastBatch = null;
+      const toastBatch = text => { const s = $('status'); s.className = 'status'; s.textContent = text; };
+
+      // 这一栏全部已经处理了: ask once, then record each row exactly as the single card's 已经处理了 does; the whole batch can be taken back.
+      $('old-all').addEventListener('click', () => { $('old-confirm').hidden = false; $('old-err').hidden = true; $('old-yes').focus(); });
+      $('old-no').addEventListener('click', () => { $('old-confirm').hidden = true; $('old-all').focus(); });
+      $('old-yes').addEventListener('click', async () => {
+        const codes = oldCodes.slice(), yes = $('old-yes');
+        yes.disabled = true; $('old-err').hidden = true;
+        try {
+          const r = await post('/api/todo/batch', { action: 'handled', codes });
+          lastBatch = r.done ? { codes: r.codes, message: r.message } : null;
+          $('old-confirm').hidden = true;
+          await load();
+        } catch (exc) { $('old-err').hidden = false; $('old-err').textContent = exc.message; }
+        yes.disabled = false;
+      });
+
+      async function post(path, payload) {
+        const response = await fetch(path, { method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF }, body: JSON.stringify(payload) });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.error || '没有保存成功，请刷新后重试。');
+        return body;
+      }
+      const stamp = iso => {
+        const d = new Date(iso.length === 10 ? iso + 'T00:00:00' : iso);
+        if (isNaN(d)) return '';
+        return iso.length === 10 ? d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+          : d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+      };
+
+      function commandRow(text, href) {
+        const row = el('div', 'cmd');
+        if (href) { const a = el('a', 'open', '打开'); a.href = href; a.target = '_blank'; a.rel = 'noopener'; row.append(a); }
+        row.append(el('code', null, text));
+        const copy = el('button', 'short', '复制'); copy.type = 'button';
+        copy.addEventListener('click', async () => {
+          try { await navigator.clipboard.writeText(text); copy.textContent = '已复制 ✓'; } catch { copy.textContent = '请手动选中'; }
+          setTimeout(() => { copy.textContent = '复制'; }, 1800);
+        });
+        row.append(copy);
+        return row;
+      }
+
+      function badges(c) {
+        const top = el('div', 'badges');
+        top.append(el('span', 'badge code', c.code), el('span', 'badge kind', KINDS[c.kind] || ''), el('span', 'badge line', c.section || ''));
+        if (c.due || c.deadline) top.append(el('span', 'badge deadline', c.due ? '截止 ' + c.due : '有截止日'));
+        if (c.blocks) top.append(el('span', 'badge blocks', '挡着别的工作'));
+        if (c.quiet) top.append(el('span', 'badge', '不急'));
+        if (c.minutes) top.append(el('span', 'badge', '约 ' + c.minutes + ' 分钟'));
+        if (c.age_days != null && c.age_days >= 1) top.append(el('span', c.stale ? 'badge stale' : 'badge', '挂了 ' + c.age_days + ' 天'));
+        if (c.stale) top.append(el('span', 'badge stale', '可能已过时'));
+        return top;
+      }
+
+      // The card folds into a one-line receipt the moment he clicks (feedback now), the write follows; a failure puts the card back.
+      function fold(box, original, message, undo) {
+        const row = el('div', 'banner');
+        row.append(el('span', 'what', message));
+        if (undo) {
+          const b = el('button', 'short', '撤回'); b.type = 'button';
+          b.addEventListener('click', async () => {
+            b.disabled = true;
+            try { await post('/api/todo/act', { code: undo, action: 'undo' }); hold = 0; load(); }
+            catch (exc) { b.disabled = false; row.append(el('span', 'err', exc.message)); }
+          });
+          row.append(b);
+        }
+        box.classList.add('gone');
+        box.replaceChildren(row);
+        return row;
+      }
+
+      function act(c, box, payload, wait, noteBox, errorBox, buttons) {
+        const original = [...box.childNodes];
+        buttons.forEach(b => { b.disabled = true; });
+        errorBox.hidden = true;
+        const row = fold(box, original, wait, null);
+        hold += 1;
+        post('/api/todo/act', { code: c.code, ...payload, note: noteBox.value }).then(result => {
+          fold(box, original, result.message, result.answered === false ? null : c.code);
+          setTimeout(() => { hold = Math.max(0, hold - 1); if (!hold) load(); }, 2200);
+        }, exc => {
+          hold = Math.max(0, hold - 1);
+          box.classList.remove('gone'); box.replaceChildren(...original);
+          buttons.forEach(b => { b.disabled = false; });
+          errorBox.hidden = false; errorBox.textContent = exc.message;
+        });
+      }
+
+      function liveCard(c) {
+        const box = el('article', 'card' + (c.due || c.blocks ? ' urgent' : ''));
+        box.dataset.code = c.code;
+        const note = el('input', 'note'); note.type = 'text'; note.maxLength = 1000; note.placeholder = '补一句话（可不填）';
+        note.setAttribute('aria-label', c.code + ' 补一句话');
+        const err = el('p', 'err'); err.hidden = true;
+        const actions = el('div', 'actions');
+        const buttons = [];
+        const add = (label, cls, payload, wait) => {
+          const b = el('button', cls, label); b.type = 'button';
+          b.addEventListener('click', () => act(c, box, payload, wait, note, err, buttons));
+          buttons.push(b); actions.append(b); return b;
+        };
+        const parts = [badges(c), el('h3', null, c.title)];
+        const field = (label, text, cls) => { if (!text) return; const p = el('p', 'field ' + (cls || '')); p.append(el('b', null, label), document.createTextNode(text)); parts.push(p); };
+        field('要你做', c.do);
+        if (c.kind === 'D') {
+          field('为什么是你', c.why || '');
+          if (c.recommendation) { const p = el('p', 'field rec'); p.append(el('b', null, '建议'), document.createTextNode(c.recommendation.replace(/^建议[：:]?\s*/, ''))); parts.push(p); }
+          const facts = el('p', 'facts');
+          if (c.facts_missing) facts.textContent = '依赖的外部事实：行里没写';
+          else c.facts.forEach(f => {
+            facts.append(el('span', null, '依赖的外部事实：' + f.text + '（上次核对 ' + f.checked + '）'));
+            if (f.stale) facts.append(document.createTextNode(' '), el('span', 'badge stale', '可能过期'));
+            facts.append(document.createElement('br'));
+          });
+          parts.push(facts);
+        }
+        (c.commands || []).forEach((t, i) => parts.push(commandRow(t, (c.command_hrefs || [])[i])));
+        if (c.kind === 'V') {
+          const target = (c.command_hrefs || []).find(Boolean) || ((c.links || [])[0] || {}).href || (c.urls || [])[0];
+          if (target) { const a = el('a', 'open', '打开'); a.href = target; a.target = '_blank'; a.rel = 'noopener'; actions.append(a); }
+          (c.links || []).slice(1).forEach(l => { const a = el('a', null, l.label); a.href = l.href; a.target = '_blank'; a.rel = 'noopener'; actions.append(a); });
+        }
+        if (c.full && c.kind !== 'V' && c.kind !== 'K') { const more = el('details'); more.append(el('summary', null, '这一行的全文'), el('p', null, c.full)); parts.push(more); }
+        box.append(...parts);
+        if (c.kind === 'D') {
+          if (c.recommendation) add('照建议办', 'primary', { action: 'reply', option: '\u7167\u5efa\u8bae\u529e' }, '正在记下…');
+          (c.options || []).forEach(o => add(o.label + ' ' + o.text, null, { action: 'reply', option: o.label }, '正在记下…'));
+          add('再想想', 'short', { action: 'reply', option: '\u518d\u60f3\u60f3' }, '正在记下…');
+          if (c.reply && c.reply.option === '\u518d\u60f3\u60f3') buttons[buttons.length - 1].classList.add('chosen');
+        } else if (c.kind === 'T') {
+          add('做完了', 'primary short', { action: 'reply', option: '\u505a\u5b8c\u4e86' }, '正在记下…');
+        } else if (c.kind === 'V') {
+          [['用', '\u7528'], ['没用', '\u6ca1\u7528'], ['返工', '\u8fd4\u5de5']].forEach(([v, val]) => add(v, 'short', { action: 'rate', option: val }, '正在记下评价…'));
+          add('看过了', 'short', { action: 'seen' }, '正在收起…');
+        } else {
+          add('看过了', 'primary short', { action: 'seen' }, '正在收起…');
+        }
+        if (c.stale) add('已经处理了', 'ghost', { action: 'handled' }, '正在记下…');
+        actions.append(note);
+        box.append(actions, err);
+        return box;
+      }
+
+      function waitingCard(c) {
+        const box = el('article', 'card compact');
+        box.dataset.code = c.code;
+        const r = c.reply || {};
+        box.append(badges({ ...c, minutes: 0, age_days: null, stale: false }), el('h3', null, c.title),
+          el('p', 'how', '你选了「' + (r.option || '（只写了说明）') + '」' + (r.note ? '：' + r.note : '') + '（' + stamp(r.at || '') + '）。'
+            + (r.status === 'done' ? c.section + '已经处理过这条回复，但原行还没改状态。' : c.section + '下次运行会照办。')));
+        if (r.status !== 'done') {
+          const row = el('div', 'actions');
+          const b = el('button', 'short', '撤回'); b.type = 'button';
+          b.addEventListener('click', async () => {
+            b.disabled = true;
+            try { await post('/api/todo/act', { code: c.code, action: 'undo' }); load(); }
+            catch (exc) { b.disabled = false; row.append(el('span', 'err', exc.message)); }
+          });
+          row.append(b); box.append(row);
+        }
+        return box;
+      }
+
+      function handledCard(h) {
+        const box = el('article', 'card compact');
+        const top = el('div', 'badges');
+        if (h.code) top.append(el('span', 'badge code', h.code));
+        if (h.kind_label) top.append(el('span', 'badge kind', h.kind_label));
+        if (h.section) top.append(el('span', 'badge line', h.section));
+        box.append(top, el('h3', null, h.title), el('p', 'how', h.how + (h.at ? '（' + stamp(h.at) + '）' : '')));
+        if (h.undo) {
+          const row = el('div', 'actions');
+          const b = el('button', 'short', '撤回'); b.type = 'button';
+          b.addEventListener('click', async () => {
+            b.disabled = true;
+            try { await post('/api/todo/act', { code: h.code, action: 'undo' }); load(); }
+            catch (exc) { b.disabled = false; row.append(el('span', 'err', exc.message)); }
+          });
+          row.append(b); box.append(row);
+        }
+        return box;
+      }
+
+      function recentCard(r) {
+        const box = el('article', 'card compact');
+        const top = el('div', 'badges');
+        top.append(el('span', 'badge', '审查通过 ' + r.done));
+        box.append(top, el('h3', null, r.title || r.head));
+        (r.commands || []).forEach((t, i) => box.append(commandRow(t, (r.command_hrefs || [])[i])));
+        const row = el('div', 'actions');
+        const how = el('span', 'small', r.rating ? '你评过：' + r.rating.verdict + '（想改再点）' : '想评价顺手点，不点也行：');
+        row.append(how);
+        [['用', '\u7528'], ['没用', '\u6ca1\u7528'], ['返工', '\u8fd4\u5de5']].forEach(([v, val]) => {
+          const b = el('button', 'short' + (r.rating && r.rating.verdict === val ? ' chosen' : ''), v); b.type = 'button';
+          b.addEventListener('click', async () => {
+            b.disabled = true;
+            try { await post('/api/pending/rating', { id: r.id, verdict: val, note: '' }); how.textContent = '已记下评价「' + v + '」。'; b.classList.add('chosen'); }
+            catch (exc) { how.textContent = exc.message; }
+            b.disabled = false;
+          });
+          row.append(b);
+        });
+        box.append(row);
+        return box;
+      }
+
+      function render() {
+        const h = data.headline, cards = data.cards;
+        const urgent = h.top ? h.top.title + (h.top.due ? '（截止 ' + h.top.due + '）' : h.top.blocks ? '（挡着别的工作）' : '') : '无（旧卡见折叠栏）';
+        $('headline').textContent = !h.count ? '现在没有要你的事。' + (h.folded ? '最急：' + urgent : '')
+          : '要你的 ' + h.count + ' 件，约 ' + h.minutes + ' 分钟，最急：' + urgent;
+        document.title = (h.count ? '(' + h.count + ') ' : '') + '要你的';
+        const fresh = cards.filter(c => !c.old), old = cards.filter(c => c.old);
+        const count = k => fresh.filter(c => c.kind === k).length;
+        const bar = [['', '全部 ' + fresh.length], ...['D', 'T', 'V'].filter(k => count(k) || filter === k).map(k => [k, KINDS[k] + ' ' + count(k)])];
+        $('filters').replaceChildren(...bar.map(([k, label]) => {
+          const b = el('button', 'short' + (filter === k ? ' on' : ''), label); b.type = 'button';
+          b.addEventListener('click', () => { filter = k; render(); });
+          return b;
+        }));
+        const front = fresh.filter(c => !filter || c.kind === filter);
+        $('cards').replaceChildren(...(front.length ? front.map(liveCard) : [el('p', 'empty', fresh.length ? '这一类现在没有。' : '没有要你动手的事。')]));
+        $('old-box').hidden = !old.length;
+        const nv = old.filter(c => c.kind === 'V').length, nk = old.filter(c => c.kind === 'K').length;
+        $('old-title').textContent = '可能已过时 ' + old.length + ' 件';
+        $('old-note').textContent = '3 天前的看/试 ' + nv + ' 件，加上全部知道就行 ' + nk + ' 件；不计入上面的件数和分钟。多半已经看过或办过了。';
+        $('old-sum').textContent = '展开逐张看这 ' + old.length + ' 件';
+        $('old-confirm-text').textContent = '把这 ' + old.length + ' 件都标成「已经处理了」？每一件的任务行行尾会加一句 〔owner MM-DD 点「已经处理了」〕，由各线下次审查核对；做完后可以整批撤回。';
+        if (!old.length) $('old-confirm').hidden = true;
+        $('old').replaceChildren(...old.map(liveCard));
+        oldCodes = old.map(c => c.code);
+        const note = $('batch-note');
+        note.hidden = !lastBatch;
+        if (lastBatch) {
+          const b = el('button', 'short', '撤回这一批'); b.type = 'button';
+          b.addEventListener('click', async () => {
+            b.disabled = true;
+            try { const r = await post('/api/todo/batch', { action: 'undo', codes: lastBatch.codes }); lastBatch = null; toastBatch(r.message); load(); }
+            catch (exc) { b.disabled = false; note.append(el('span', 'err', exc.message)); }
+          });
+          note.replaceChildren(el('span', 'what', lastBatch.message), b);
+        }
+        $('waiting-box').hidden = !data.waiting.length;
+        $('waiting-head').textContent = '已回复，等处理（' + data.waiting.length + '）';
+        $('waiting').replaceChildren(...data.waiting.map(waitingCard));
+        $('handled-box').hidden = !data.handled.length;
+        $('handled-sum').textContent = '已处理（7 天）' + data.handled.length + ' 张，点开查看或撤回';
+        $('handled').replaceChildren(...data.handled.map(handledCard));
+        $('recent-box').hidden = !data.recent.length;
+        $('recent-sum').textContent = '最近成果，不用你做什么（' + data.recent.length + ' 件）';
+        $('recent-note').textContent = '最近 5 天审查通过、写了打开命令的成果，更早的 ' + (data.recent_omitted || 0) + ' 条没列。评价会记给总理每周对照审查结论。';
+        $('recent').replaceChildren(...data.recent.map(recentCard));
+        $('foot').textContent = '回复写入 ' + data.files.replies + '，评价写入 ' + data.files.ratings + '。页面不直接改任务清单，只有「已经处理了」会在那一行行尾加一句备注。';
+      }
+
+      async function load() {
+        const status = $('status');
+        try {
+          const response = await fetch('/api/todo', { cache: 'no-store', credentials: 'same-origin' });
+          if (!response.ok) throw new Error();
+          data = await response.json();
+          render();
+          const at = new Date(data.generated_at_utc);
+          status.className = 'status';
+          status.replaceChildren(document.createTextNode('读于 ' + at.toLocaleTimeString('zh-CN', { hour12: false }) + ' · 每 60 秒自动刷新（你在写字或展开全文时先不刷） '));
+          const now = el('button', 'short', '现在刷新'); now.type = 'button'; now.addEventListener('click', load);
+          status.append(now);
+        } catch {
+          status.className = 'status error';
+          status.textContent = '读取失败，页面上的内容可能已过时。输入台服务可能没有在运行；点这里重试或刷新页面。';
+          const retry = el('button', 'short', '重试'); retry.type = 'button'; retry.addEventListener('click', load);
+          status.append(document.createTextNode(' '), retry);
+        }
+      }
+      load();
+
+      const busy = () => hold > 0 || [...document.querySelectorAll('input.note')].some(n => n.value || n === document.activeElement)
+        || !!document.querySelector('.card details[open]') || $('old-details').open || !$('old-confirm').hidden;
+      const refresh = () => { if (!document.hidden && !busy()) load(); };
+      setInterval(refresh, 60000);
+      document.addEventListener('visibilitychange', refresh);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+# Python 3.12; run from the repository root:
+# python -m unittest discover -s input -t . -p 'test_*.py' -v
+aiohttp==3.14.5
+pypinyin==0.55.0
+
+# No ASR/LLM weights, torch, faster-whisper, PyAV, or GPU runtime needed:
+# model calls and decoder subprocesses in test_*.py use synthetic data/mocks.
+# WSL skips Windows process API checks, Start-Process drive-path links, and
+# nano.WireFormat's Windows-to-WSL decoder bridge (see audit for exact tests).
