@@ -80,6 +80,27 @@
 
 ## 简单教程
 
+### 最简单：一段提示词
+
+建一个空文件夹，在里面打开 Claude Code，粘贴这段。它会检查你的机器、替你搭好文件夹结构，并一步一步带你设置好 Premier。
+
+<details>
+<summary>提示词（点开）</summary>
+
+```text
+我想从这个空文件夹开始，建我自己的 Premier（一个靠纯文本文件运转的 AI 组织）。请一步一步来：每一步开始前，用一两句话告诉我你要做什么，等我说“好”再动手。不要向我要密码、token 或 key；不要登录任何账号、发消息、注册计划任务或花钱。
+
+1. 检查 python（3.12 或更高）、git、claude 是否在 PATH 里（`python --version`、`git --version`、`claude --version`）。缺哪个就停下，告诉我怎么装。
+2. 在当前文件夹下新建 `workspace`，把 https://github.com/Wonderfon/you-need-a-premier.git 克隆到 `workspace\incore`（文件夹必须叫 incore），在当前文件夹下建虚拟环境 `venv`，把 `workspace\incore\requirements\input-dashboard.txt` 装进去。
+3. 问我的名字。把 `workspace\incore\instance\example\instance.json` 复制成 `workspace\incore\instance\instance.json` 并填好：`workspace` 填 `workspace` 文件夹的完整路径，`user_home` 填当前文件夹下新建的空文件夹 `orghome`，`owner_name` 填我的名字。写文件前先给我看内容。
+4. 读 `workspace\incore\docs\start-session.md` 并照着做：一次问我一个问题，写出我的第一张意图卡、我的线、我的项目和第一批任务行，每个文件写之前先给我看。
+5. 照 `workspace\incore\docs\start.md` 第 5 步启动看板，给我一条打开它的命令和一条停止它的命令。如果 8765 端口被占用，照 `start.md` 写的换一个端口。
+```
+
+</details>
+
+### 或者自己克隆
+
 两条路，挑属于你的那一条。
 
 1. **你是第一次用 Premier。** 克隆本仓库，照 [docs/start.md](docs/start.md) 走。约 30 分钟，最后看板上会出现你的第一个项目。不需要任何账号；Claude Code 由你自己登录。
@@ -89,4 +110,4 @@
 
 本仓库是 v0.1。这个包里已有：组织看板（`input/`）和 [docs/start.md](docs/start.md)（从全新 clone 带你走到看板显示你的第一个项目）；引导式设置会话（[docs/start-session.md](docs/start-session.md)，写出你的意图卡、线、项目和第一批任务行）；纯文本任务表；独立的审核步骤；调度器的用量闸门（调度器代码在 `control/`，可选：不会替你注册）；在新电脑上从备份恢复（[docs/restore.md](docs/restore.md)）；以及用虚构数据的离线演示（`demo/run_demo.py`）。还不在这个包里：历史存档、开箱即用的语音输入台（语音识别代码在，但没带模型，start.md 也不带你设置它），以及 Discord、邮件、备份的分步设置。
 
-更多：[开始](docs/start.md) · [从备份恢复](docs/restore.md) · [安装约定](docs/install-contract.md) · [控制队列说明](control/README.md) · [MIT 许可证](LICENSE)
+更多：[常见问题](docs/faq.md) · [开始](docs/start.md) · [从备份恢复](docs/restore.md) · [安装约定](docs/install-contract.md) · [控制队列说明](control/README.md) · [MIT 许可证](LICENSE)

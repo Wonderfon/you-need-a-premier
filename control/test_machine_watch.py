@@ -24,6 +24,37 @@ def row(n, top=(), dwm=8.6, gpu=3.0, idle=0.5, procs=(), mem=33.9, disk=2800.0, 
 LAG = [row(n, top=[("iGoSwServer.exe", 10888, 98.6), ("python.exe", 67568, 35.9)], dwm=97.0) for n in range(3)]
 # 01:50-01:57 local generation: GPU 92 % while the owner works, dwm 58.7 %
 GPU_RUN = [row(n, gpu=92.0, dwm=58.7, procs=[LLAMA]) for n in range(3)]
+
+
+# iGoSwServer.exe (pid 11692) CPU % per row from data/machine-health.jsonl, 11-07 22:33 to 11-08 04:16 (None = not in that row's top list).
+# It wobbles between 40 % and 99 %, so "3 in a row >= 90 %" breaks again and again; the sustained rule must still report it.
+REAL_IGO = [
+    ("11-07 22:33", 98.3), ("11-07 22:39", None), ("11-07 22:40", None), ("11-07 22:43", 79.7), ("11-07 22:45", None),
+    ("11-07 22:46", None), ("11-07 22:52", None), ("11-07 22:53", None), ("11-07 22:54", 93.8), ("11-07 22:57", None),
+    ("11-07 22:58", None), ("11-07 23:04", 90.9), ("11-07 23:14", 88.3), ("11-07 23:25", 91.0), ("11-07 23:35", 92.9),
+    ("11-07 23:45", 97.3), ("11-07 23:56", 98.3), ("11-07 23:57", None), ("11-07 23:58", None), ("11-08 00:06", 79.0),
+    ("11-08 00:17", 90.9), ("11-08 00:17", None), ("11-08 00:18", None), ("11-08 00:22", None), ("11-08 00:23", None),
+    ("11-08 00:27", 76.2), ("11-08 00:29", None), ("11-08 00:29", None), ("11-08 00:35", None), ("11-08 00:36", None),
+    ("11-08 00:37", 98.6), ("11-08 00:41", None), ("11-08 00:42", None), ("11-08 00:43", None), ("11-08 00:44", None),
+    ("11-08 00:48", 91.6), ("11-08 00:49", None), ("11-08 00:50", None), ("11-08 00:50", None), ("11-08 00:51", None),
+    ("11-08 00:58", 39.3), ("11-08 00:59", None), ("11-08 01:00", None), ("11-08 01:05", None), ("11-08 01:06", None),
+    ("11-08 01:09", 51.8), ("11-08 01:10", None), ("11-08 01:11", None), ("11-08 01:19", 68.4), ("11-08 01:20", None),
+    ("11-08 01:21", None), ("11-08 01:23", None), ("11-08 01:24", None), ("11-08 01:24", None), ("11-08 01:25", None),
+    ("11-08 01:29", 55.0), ("11-08 01:40", 85.9), ("11-08 01:44", None), ("11-08 01:45", None), ("11-08 01:50", 79.5),
+    ("11-08 02:00", None), ("11-08 02:00", 80.1), ("11-08 02:01", None), ("11-08 02:09", None), ("11-08 02:10", None),
+    ("11-08 02:11", 99.0), ("11-08 02:21", 98.6), ("11-08 02:31", 76.8), ("11-08 02:42", 97.4), ("11-08 02:42", None),
+    ("11-08 02:43", None), ("11-08 02:52", 86.7), ("11-08 03:03", 98.6), ("11-08 03:13", 98.6), ("11-08 03:25", None),
+    ("11-08 03:35", 88.3), ("11-08 03:45", 84.4), ("11-08 03:56", 78.5), ("11-08 04:06", 88.2), ("11-08 04:16", 98.5),
+]
+
+
+def real_rows():
+    rows = []
+    for stamp, cpu in REAL_IGO:
+        at = datetime.fromisoformat(f"2026-{stamp.replace(' ', 'T')}:00-05:00")
+        base = row(0, top=[("iGoSwServer.exe", 11692, cpu)] if cpu is not None else [])
+        rows.append({**base, "at": at.isoformat(), "interval_s": 600})
+    return rows
 IDLE = [row(n, top=[("msedgewebview2.exe", 42776, 4.1)], dwm=8.6, gpu=3.0) for n in range(6)]
 
 
@@ -40,6 +71,22 @@ class Judge(unittest.TestCase):
         self.assertIn("92%", detail)
         self.assertIn("llama-server.exe（pid 31000）", detail)
         self.assertIn("--port 8795", detail)
+
+    def test_wobbling_76_to_99_percent_for_hours_is_reported_as_sustained(self):
+        rows = real_rows()
+        found = mw.episodes(rows, datetime.fromisoformat("2026-11-07T22:00:00-05:00"))
+        igo = [e for e in found if e["key"] == "iGoSwServer.exe#11692"]
+        self.assertEqual(len(igo), 1)  # one episode, not a string of short ones
+        self.assertLessEqual(igo[0]["first"].strftime("%m-%d %H:%M"), "11-08 01:00")
+        self.assertGreaterEqual(igo[0]["last"].strftime("%m-%d %H:%M"), "11-08 03:45")  # the rows after it are not in the fixture
+        self.assertIn("平均", igo[0]["detail"])
+
+    def test_average_rule_needs_a_full_hour_and_a_high_average(self):
+        top = lambda cpu: [("iGoSwServer.exe", 1, cpu)]
+        self.assertEqual(self.kinds([row(n, top=top(80.0)) for n in range(5)]), set())  # 5 samples: not an hour yet
+        self.assertEqual(self.kinds([row(n, top=top(74.0)) for n in range(6)]), set())  # under the line
+        self.assertEqual(self.kinds([row(n, top=top(76.0)) for n in range(6)]), {("cpu", "iGoSwServer.exe#1")})
+        self.assertEqual(self.kinds([row(n, top=top(76.0 if n % 2 else 80.0), interval=600) for n in range(6)][:5] + [row(9, top=top(80.0))]), set())  # gap breaks the chain
 
     def test_normal_idle_is_not_reported(self):
         for i in range(len(IDLE)):
@@ -74,6 +121,12 @@ class Judge(unittest.TestCase):
         first["interval_s"], first["top"] = None, []
         self.assertEqual(self.kinds([first, LAG[1], LAG[2]]), set())
 
+    def test_an_empty_row_between_normal_rows_does_not_break_the_chain(self):
+        empty = {"at": LAG[1]["at"], "interval_s": None, "top": []}  # what a test run once appended to the real file
+        self.assertEqual(self.kinds([LAG[0], empty, LAG[1], LAG[2]]), self.kinds(LAG))
+        self.assertIn(("cpu", "iGoSwServer.exe#10888"), self.kinds([LAG[0], LAG[1], empty, LAG[2]]))
+        self.assertEqual(self.kinds([LAG[0], LAG[1], LAG[2], empty]), set())  # the empty row itself reports nothing
+
     def test_report_part_merges_episodes_and_says_when_there_is_no_data(self):
         rows = LAG + [row(3, top=[("iGoSwServer.exe", 10888, 98.6)], dwm=97.0)]
         text = mw.report_part(self._file(rows), T0 + timedelta(hours=1))
@@ -84,11 +137,34 @@ class Judge(unittest.TestCase):
         self.assertIn("没有机器取样记录", mw.report_part(self._file([]), T0))
         self.assertIn("没有机器取样记录", mw.report_part(self._file(IDLE), T0 + timedelta(hours=20)))  # all older than 12 h
 
+    def test_report_part_names_the_end_date_when_the_episode_crosses_midnight(self):
+        rows = [row(n, top=[("iGoSwServer.exe", 10888, 98.6)], dwm=97.0) for n in range(136, 151)]  # 11-01 23:47 to 11-02 01:17
+        text = mw.report_part(self._file(rows), T0 + timedelta(hours=16), hours=24)
+        self.assertIn("–11-02 01:07（13 次取样）", text)
+        self.assertNotIn("约", text)  # under a day: no day count
+
+    def test_report_part_adds_a_day_count_for_an_episode_longer_than_24_hours(self):
+        rows = LAG + [row(n, top=[("iGoSwServer.exe", 10888, 98.6)], dwm=97.0) for n in range(432, 435)]  # 3 days later
+        text = mw.report_part(self._file(rows), T0 + timedelta(days=4), hours=24 * 5)
+        self.assertIn("11-01 01:27–11-04 ", text)  # end date is named
+        self.assertIn("（约 3 天，", text)
+
     def test_dashboard_view_is_stale_when_the_sampler_stopped(self):
         path = self._file(LAG)
         self.assertEqual({a["kind"] for a in mw.current(path, T0 + timedelta(minutes=30))["anomalies"]}, {"cpu", "dwm"})
         self.assertEqual(mw.current(path, T0 + timedelta(hours=3))["state"], "stale")
         self.assertEqual(mw.current(self._file([]), T0)["state"], "missing")
+
+    def test_dashboard_view_still_shows_the_anomaly_when_an_empty_row_follows(self):
+        empty = {"at": (T0 + timedelta(minutes=21)).isoformat(timespec="seconds"), "interval_s": None, "top": []}  # the 10:28:39 case
+        view = mw.current(self._file(LAG + [empty]), T0 + timedelta(minutes=25))
+        self.assertEqual(view["state"], "ok")
+        self.assertTrue(any(a["kind"] == "cpu" and "iGoSwServer.exe（pid 10888）" in a["detail"] for a in view["anomalies"]), view)
+
+    def test_dashboard_view_drops_an_anomaly_whose_last_reading_is_older_than_the_limit(self):
+        empty = {"at": (T0 + timedelta(minutes=50)).isoformat(timespec="seconds"), "interval_s": None, "top": []}
+        view = mw.current(self._file(LAG + [empty]), T0 + timedelta(minutes=51))
+        self.assertEqual((view["state"], view["anomalies"]), ("ok", []))
 
     def test_discord_alert_is_a_function_only_and_does_not_repeat(self):
         path, state = self._file(LAG), Path(self.tmp) / "alerts.json"

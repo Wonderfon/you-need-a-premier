@@ -118,7 +118,7 @@ class Stats(unittest.TestCase):
         with mock.patch.object(tick, "pid_alive", side_effect=lambda pid: pid == 4242), \
                 mock.patch.object(tick, "lane_lock", side_effect=lambda r, p=None: Path(tempfile.gettempdir()) / f"nolock-{r}-{p}") as lock:
             live = Path(tempfile.gettempdir()) / "nolock-work-umba"
-            live.write_text("4242")
+            live.write_text("4242", encoding="utf-8")
             self.addCleanup(live.unlink)
             body = section(self.render([], backlog), "没有在跑的 running 行（2 行")
         self.assertIn("| Arbitros 线 | 11:00 | 是（下次调度器启动） | Uvox：a |", body)
@@ -170,6 +170,107 @@ class Stats(unittest.TestCase):
 
     def test_empty_ledger_still_renders(self):
         self.assertIn("## 额度", self.render([]))
+
+    def test_render_includes_blocked_ready_even_without_a_seen_timestamp(self):
+        backlog = "## 组织线\n- [blocked: 等日期 10-04] 组织：可以复查\n"
+        body = section(self.render([], backlog), "等待条件可能已满足的 blocked 行（1 行）")
+        self.assertIn("组织：可以复查", body)
+        self.assertIn("只报不改", body)
+        self.assertIn("backlog.md:2", body)
+
+
+class BlockedReady(unittest.TestCase):
+    NOW = datetime(2026, 11, 2, 14, 30, tzinfo=timezone(timedelta(hours=-5)))
+
+    def report(self, backlog, now=None):
+        clock = now or self.NOW
+        rows = rs.review_snapshot(backlog, [], tick, clock)["rows"]
+        before = json.dumps(rows, ensure_ascii=False)
+        text = rs.blocked_ready_section(rows, clock)
+        self.assertEqual(json.dumps(rows, ensure_ascii=False), before)  # reporting must not release or edit rows
+        return text
+
+    def test_wait_date_time_deadline_and_scheduled_date(self):
+        text = self.report("## 组织线\n"
+                           "- [blocked: 等日期 11-01] 组织：日期\n"
+                           "- [blocked: 等 11-02 14:29] 组织：时分\n"
+                           "- [blocked: 截止美东 11-02 14:30] 组织：截止\n"
+                           "- [blocked: 定时，2026-10-29起跑] 组织：定时\n"
+                           "- [blocked: 等到 10-29] 组织：等到\n"
+                           "- [blocked: 等 11-02 14:31] 组织：未到时间\n"
+                           "- [blocked: 等日期 11-09] 组织：未来日期\n"
+                           "- [blocked: 定时，2027-01-04起跑] 组织：明年\n")
+        self.assertIn("（5 行）", text)
+        for item in ("日期", "时分", "截止", "定时", "等到"):
+            self.assertIn(f"组织：{item}", text)
+        for item in ("未到时间", "未来日期", "明年"):
+            self.assertNotIn(f"组织：{item}", text)
+        self.assertIn("2026-11-02 14:29（本地时间）（无年按本次年份）", text)
+
+    def test_same_section_done_evidence_and_completion_wording(self):
+        state = "done 10-30 23:26：sol 审查通过，audits/" + "证据" * 30
+        item = "组织：" + "长标题" * 25 + "|尾部"
+        text = self.report(f"## 组织线\n- [{state}] 组织：Colab CLI 实测核实\n"
+                           "- [blocked: 等上面「Colab CLI 实测核实」那行过审] " + item + "\n"
+                           "- [blocked: 等本线「Colab CLI 实测核实」完成] 组织：完成后做\n"
+                           "- [blocked: 等上面「Colab CLI 实测核实」返工过审] 组织：返工后做\n")
+        self.assertIn("（3 行）", text)
+        self.assertIn(f"backlog.md:2 [{state[:40]}]", text)
+        self.assertIn(item[:60], text)
+        self.assertNotIn("尾部", text)
+        self.assertIn("同小节前置已 done", text)
+
+    def test_dependency_must_be_done_in_the_same_section_item(self):
+        text = self.report("## 别线\n- [done] 组织：别线前置\n"
+                           "## 组织线\n- [review] 组织：待审前置\n"
+                           "- [done：状态里提及缺失前置] 组织：其他事情\n"
+                           "- [blocked: 等「别线前置」那行过审] 组织：跨线\n"
+                           "- [blocked: 等「待审前置」完成] 组织：未审完\n"
+                           "- [blocked: 等「缺失前置」完成] 组织：没找到\n")
+        self.assertIn("（0 行）", text)
+
+    def test_dots_deadline_passed_and_future_or_missing_deadlines(self):
+        text = self.report("## 组织线\n"
+                           "- [blocked: 等 dotz 交 T-20261030-04（截止美东 10-31 12:00）] 组织：dotz 旧任务\n"
+                           "- [blocked: 等 dotz 交 T-20261102-01（截止美东 11-03 12:00）] 组织：dotz 未来\n"
+                           "- [blocked: dotz T-20261030-05 阻塞：缺文件] 组织：dotz 没截止\n")
+        self.assertIn("（1 行）", text)
+        self.assertIn("dotz 截止已过", text)
+        self.assertIn("T-20261030-04：2026-10-31 12:00", text)
+        self.assertNotIn("等待日期已到 |", text)
+        self.assertNotIn("组织：dotz 未来", text)
+        self.assertNotIn("组织：dotz 没截止", text)
+
+    def test_three_human_wait_exclusions_override_all_hints(self):
+        for exclusion in ("等你决定", "暂停本项目", "等总理"):
+            with self.subTest(exclusion=exclusion):
+                text = self.report("## 组织线\n- [done] 组织：前置\n"
+                                   f"- [blocked: 等日期 10-01；等「前置」过审；dotz T-20261030-04 截止美东 10-31 12:00；{exclusion}] 组织：排除\n")
+                self.assertIn("（0 行）", text)
+
+    def test_body_dates_citations_and_nonblocked_rows_do_not_count(self):
+        text = self.report("## 组织线\n"
+                           "- [blocked: 等更多数据；核对 10-01，records\x2f2026-10-01-a.json] 组织：正文等日期 10-01\n"
+                           "- [blocked: 定时，分支合入后第 8 天；原定 10-01 作废] 组织：旧日期作废\n"
+                           "- [review: 等日期 10-01] 组织：待审\n"
+                           "- [done: 等日期 10-01] 组织：完成\n")
+        self.assertIn("（0 行）", text)
+
+    def test_invalid_dates_and_imprecise_clocks_are_skipped(self):
+        text = self.report("## 组织线\n"
+                           "- [blocked: 等日期 02-30] 组织：无效日期\n"
+                           "- [blocked: 等 10-30 25:00] 组织：无效时间\n"
+                           "- [blocked: 等 10-30 22:1x] 组织：模糊时间\n")
+        self.assertIn("（0 行）", text)
+
+    def test_utc_suffix_compares_the_fixed_clock_in_utc(self):
+        # 14:30 EST = 19:30Z; a Z cutoff must not be compared with 14:30.
+        text = self.report("## 组织线\n"
+                           "- [blocked: 等 11-02 19:29Z] 组织：UTC 已过\n"
+                           "- [blocked: 等 11-02 19:31Z] 组织：UTC 未到\n")
+        self.assertIn("（1 行）", text)
+        self.assertIn("2026-11-02 19:29Z", text)
+        self.assertNotIn("组织：UTC 未到", text)
 
 
 class Daily(unittest.TestCase):

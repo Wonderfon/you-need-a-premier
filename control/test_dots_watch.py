@@ -250,7 +250,7 @@ class DotsWatch(unittest.TestCase):
     def test_supervise_step_calls_it(self):
         missing = Path(self.tmp.name) / "no-backlog.md"  # supervise_step returns right after the usage sample: nothing is spawned
         with mock.patch.object(tick.dots_watch, "step") as s, mock.patch.object(tick.dots_review, "step") as review, mock.patch.object(tick, "backup_watch"), \
-                mock.patch.object(tick, "website_watch"), mock.patch.object(tick, "fresh_usage", return_value=None), \
+                mock.patch.object(tick, "website_watch"), mock.patch.object(tick, "machine_watch_step"), mock.patch.object(tick, "fresh_usage", return_value=None), \
                 mock.patch.object(tick, "log"), mock.patch.object(tick, "latest_usage", return_value=None), \
                 mock.patch.object(tick, "spawn") as spawn, mock.patch.object(tick, "BACKLOG", missing):
             tick.supervise_step({"sample": None, "spawned": {}, "aux": {}}, time.time())

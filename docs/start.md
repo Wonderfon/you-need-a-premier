@@ -10,7 +10,7 @@ Already have a backup of a running Premier from another computer? Use [restore.m
 
 ## The five steps
 
-1. **Clone.** The clone address is on this repository's page: click the green **Code** button and copy the HTTPS address. The folder must be named `incore`: the code imports itself by that name. If that folder already exists in `$Root\workspace`, skip this step.
+1. **Clone.** The clone address is on this repository's page: click the green **Code** button and copy the HTTPS address. The folder must be named `incore`: the code imports itself by that name. If that folder already exists in `$Root\workspace`, skip this step. Already cloned somewhere else, or cloned and opened Claude Code in the repository folder? Ask Claude Code there to set up the layout: the repository's `CLAUDE.md` tells it how.
    ```powershell
    $Root = 'C:\Premier'
    New-Item -ItemType Directory -Path "$Root\workspace" | Out-Null

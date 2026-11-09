@@ -23,6 +23,8 @@ SAMPLE_EVERY_S = 600              # one sample per 10 minutes
 MAX_GAP_S = 1200                  # rows further apart than this are not "consecutive"
 CORE_PCT = 90.0                   # one process >= this % of one core ...
 CORE_RUNS = 3                     # ... in this many consecutive samples (30 minutes)
+AVG_PCT = 75.0                    # or: one process averaging >= this % of one core ...
+AVG_RUNS = 6                      # ... over its last this many consecutive samples (1 hour); wobbling 76-99% still counts
 DWM_PCT = 40.0                    # dwm.exe (summed) >= this % of one core ...
 DWM_RUNS = 3                      # ... in this many consecutive samples
 GPU_BUSY_PCT = 80.0               # GPU load while the owner is at the machine ...
@@ -289,12 +291,15 @@ def step(state: dict, t: float, path: Path) -> dict | None:
 # ---------- judging ----------
 
 def _chain(rows: list[dict], i: int, runs: int) -> list[dict] | None:
-    """rows[i-runs+1..i] if they are consecutive in time and have CPU figures, else None."""
-    if i + 1 < runs:
+    """The last `runs` rows up to i that have CPU figures, if they are consecutive in time, else None.
+    Rows without interval_s (the first row after a sampler restart, or a stray empty row) carry no reading: skipped, they do not break the chain."""
+    if rows[i].get("interval_s") is None:
         return None
-    chain = rows[i - runs + 1:i + 1]
+    chain = [r for r in rows[:i + 1] if r.get("interval_s") is not None][-runs:]
+    if len(chain) < runs:
+        return None
     stamps = [_time(r) for r in chain]
-    if any(s is None for s in stamps) or any(r.get("interval_s") is None for r in chain):
+    if any(s is None for s in stamps):
         return None
     if any((b - a).total_seconds() > MAX_GAP_S for a, b in zip(stamps, stamps[1:])):
         return None
@@ -312,6 +317,15 @@ def anomalies_at(rows: list[dict], i: int) -> list[dict]:
                 low = min(x["cpu"] for x in same)
                 found.append({"kind": "cpu", "key": f"{item['name']}#{item['pid']}",
                               "detail": f"{item['name']}（pid {item['pid']}）连续 {CORE_RUNS} 次占满一个核（最低 {low:.0f}%）"})
+    chain = _chain(rows, i, AVG_RUNS)
+    if chain:
+        for item in row.get("top") or []:
+            key = f"{item['name']}#{item['pid']}"
+            if any(f["key"] == key for f in found):
+                continue
+            same = [next((x["cpu"] for x in (r.get("top") or []) if x.get("pid") == item["pid"] and x.get("name") == item["name"]), 0.0) for r in chain]  # not in the top list = counted as 0
+            if sum(same) / AVG_RUNS >= AVG_PCT:
+                found.append({"kind": "cpu", "key": key, "detail": f"{item['name']}（pid {item['pid']}）最近 {AVG_RUNS} 次平均 {sum(same) / AVG_RUNS:.0f}% 个核（最低 {min(same):.0f}%）"})
     chain = _chain(rows, i, DWM_RUNS)
     if chain and all((r.get("dwm") or 0) >= DWM_PCT for r in chain):
         found.append({"kind": "dwm", "key": "dwm", "detail": f"dwm 连续 {DWM_RUNS} 次 ≥{DWM_PCT:.0f}%（最低 {min(r['dwm'] for r in chain):.0f}%）"})
@@ -340,6 +354,13 @@ def episodes(rows: list[dict], since: datetime) -> list[dict]:
     return sorted(merged.values(), key=lambda e: e["first"])
 
 
+def _when(e: dict) -> str:
+    """「11-04 16:32–06:00」 within one day, 「11-04 16:32–11-08 06:00」 across midnight."""
+    first, last = e["first"].astimezone(), e["last"].astimezone()
+    end = f"{last:%H:%M}" if first.date() == last.date() else f"{last:%m-%d %H:%M}"
+    return f"{first:%m-%d %H:%M}–{end}"
+
+
 def report_part(path: Path, now: datetime | None = None, hours: int = REPORT_HOURS) -> str:
     """One sentence for the 09:00 / 21:00 「机器和备份」 line."""
     now = now or datetime.now().astimezone()
@@ -351,7 +372,10 @@ def report_part(path: Path, now: datetime | None = None, hours: int = REPORT_HOU
     found = episodes(rows, since)
     if not found:
         return f"近 {hours} 小时取样 {len(recent)} 次，无持续异常"
-    parts = [f"{e['detail']}，{e['first']:%m-%d %H:%M}–{e['last']:%H:%M}（{e['count']} 次取样）" for e in found]
+    parts = []
+    for e in found:
+        days = f"约 {(e['last'] - e['first']).days} 天，" if e["last"] - e["first"] > timedelta(hours=24) else ""
+        parts.append(f"{e['detail']}，{_when(e)}（{days}{e['count']} 次取样）")
     return f"近 {hours} 小时持续异常：" + "；".join(parts)
 
 
@@ -364,7 +388,14 @@ def current(path: Path, now: datetime | None = None) -> dict:
     stamp = _time(rows[-1])
     if stamp is None or (now - stamp).total_seconds() > STALE_AFTER_S:
         return {"state": "stale", "anomalies": [], "at": rows[-1]["at"]}
-    return {"state": "ok", "at": rows[-1]["at"], "anomalies": [{"kind": a["kind"], "detail": a["detail"]} for a in anomalies_at(rows, len(rows) - 1)]}
+    # judge on the newest row that carries a reading; a trailing empty row must not hide the anomaly
+    last = next((i for i in range(len(rows) - 1, -1, -1) if rows[i].get("interval_s") is not None), None)
+    found = []
+    if last is not None:
+        reading_at = _time(rows[last])
+        if reading_at is not None and (now - reading_at).total_seconds() <= STALE_AFTER_S:
+            found = anomalies_at(rows, last)
+    return {"state": "ok", "at": rows[-1]["at"], "anomalies": [{"kind": a["kind"], "detail": a["detail"]} for a in found]}
 
 
 # ---------- Discord (function only; wiring is sending code, left to the owner's merge) ----------

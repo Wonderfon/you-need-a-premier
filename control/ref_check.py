@@ -20,16 +20,34 @@ CONFIG = {
         "projects/lessons/*.md",
         "../AGENTS.md",  # workspace root, outside the incore repository
     ),
+    # Second root, relative to --root: the workspace root one level above the
+    # incore. A reference missing under --root is accepted if it exists here.
+    "fallback_roots": ("..",),
 }
 # ----------------
 
 # Accept the incore/ spelling used by the rules, but ignore absolute paths
 # and URLs. Keep <placeholders> together so they can be skipped, not truncated.
+# CJK characters are not path characters: a token that touches Chinese text
+# (e.g. "records/会议的发言") is prose, so the lookahead drops it instead of
+# cutting it short and reporting a false missing file.
+CJK = r"㐀-鿿豈-﫿"
+DELIM = r"\s`\"'<>，。；：、！？「」『』（）〔〕【】《》〈〉()\[\]{};,!?|"
+# A complete file name with a known extension is checked even when it holds
+# Chinese (e.g. "audits/2026-10-29-情报dots预筛.md"); the first branch handles it.
+EXTENSION = r"\.(?:jsonl|json|md|py|txt|html|png)(?![A-Za-z0-9_./\\\-" + CJK + r"])"
 REFERENCE = re.compile(
     r"(?<![A-Za-z0-9_./\\-])(?:incore/)?"
     r"((?:records|audits|projects|control)/"
-    r"(?:<[^<>\n]+>|[^\s`\"'<>，。；：、！？「」『』（）〔〕【】《》〈〉()\[\]{};,!?|])*)"
+    r"(?:<[^<>\n]+>|[^" + DELIM + r"])*?" + EXTENSION + r"|"
+    r"(?:records|audits|projects|control)/"
+    r"(?:<[^<>\n]+>|[^" + DELIM + CJK + r"])*"
+    r"(?![^" + DELIM + r"]*[" + CJK + r"]))"
 )
+
+# A reference on a line with one of these phrases is allowed to be absent:
+# the rule says "if it exists" / "如有". Counted, not reported as missing.
+CONDITIONAL_MARKS = ("存在的话", "如有", "若有", "如果有", "如存在", "if it exists", "if exists")
 
 
 def references(line):
@@ -41,12 +59,14 @@ def references(line):
         yield path
 
 
-def scan(root, patterns):
+def scan(root, patterns, fallback_roots=CONFIG["fallback_roots"]):
     root = Path(root).resolve()
+    bases = [root] + [(root / name).resolve() for name in fallback_roots]
     files = sorted({p.resolve() for pattern in patterns for p in root.glob(pattern) if p.is_file()})
-    result = {"files": len(files), "references": 0, "skipped": 0, "missing": []}
+    result = {"files": len(files), "references": 0, "skipped": 0, "conditional": 0, "missing": []}
     for source in files:
         for number, line in enumerate(source.read_text(encoding="utf-8").splitlines(), 1):
+            conditional = any(mark in line.lower() for mark in CONDITIONAL_MARKS)
             for path in references(line):
                 # Wildcards, like <dates>, describe a family rather than a file.
                 if "<" in path or any(c in path for c in "*?"):
@@ -54,7 +74,10 @@ def scan(root, patterns):
                     continue
                 result["references"] += 1
                 target = root / path
-                if target.exists():
+                if any((base / path).exists() for base in bases):
+                    continue
+                if conditional:
+                    result["conditional"] += 1
                     continue
                 names = sorted(p.name for p in target.parent.iterdir() if p.is_file()) if target.parent.is_dir() else []
                 candidates = [str(Path(path).parent / name).replace("\\", "/")
@@ -70,7 +93,7 @@ def scan(root, patterns):
 
 def render(result):
     lines = [f"扫了 {result['files']} 个文件，引用 {result['references']} 条，缺 {len(result['missing'])} 条。",
-             f"占位或通配引用跳过 {result['skipped']} 条；重复引用按出现次数计数。只报不拦，不自动替换。"]
+             f"占位或通配引用跳过 {result['skipped']} 条；条件引用跳过 {result['conditional']} 条（写了「存在的话」「如有」等，缺失时不报）；重复引用按出现次数计数。只报不拦，不自动替换。"]
     previous = None
     for item in result["missing"]:
         if item["source"] != previous:

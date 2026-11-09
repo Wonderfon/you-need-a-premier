@@ -63,6 +63,29 @@ class MarkdownToHtml(unittest.TestCase):
         self.assertIn("<strong>通过</strong>", page)
         self.assertIn('<a href="https://example.test/?a=1&amp;b=2">原文</a>', page)
 
+    def test_local_link_line_suffix_is_not_part_of_href(self):
+        page = self.render_markdown(
+            "[single](/reports/file.md:12)\n"
+            "[hyphen](reports/file.md:12-14)\n"
+            "[en dash](./reports/file.md:12–14)\n"
+            "[port](http://127.0.0.1:8765)\n"
+            "[https](https://example.test/file:12)\n"
+            "[plain](reports/file.md)\n"
+            r"[windows](C:\reports\file.md:12)" + "\n"
+        )
+
+        for expected in (
+            '<a href="/reports/file.md">single</a>',
+            '<a href="reports/file.md">hyphen</a>',
+            '<a href="./reports/file.md">en dash</a>',
+            '<a href="http://127.0.0.1:8765">port</a>',
+            '<a href="https://example.test/file:12">https</a>',
+            '<a href="reports/file.md">plain</a>',
+            r'<a href="C:\reports\file.md">windows</a>',
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, page)
+
     def test_ordered_and_mixed_nested_lists_preserve_start_number(self):
         with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as folder:
             source = Path(folder) / "lists.md"

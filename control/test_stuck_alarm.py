@@ -129,7 +129,7 @@ class Stuck(TickCase):
 
     def test_supervise_step_runs_it_and_survives_a_failure(self):
         with mock.patch.object(tick, "stuck_alarm", side_effect=OSError("disk")) as alarm, \
-                mock.patch.object(tick.dots_review, "step"), \
+                mock.patch.object(tick.dots_review, "step"), mock.patch.object(tick, "machine_watch_step"), \
                 mock.patch.object(tick, "fresh_usage", return_value=None), \
                 mock.patch.object(tick, "latest_usage", return_value=None):
             tick.supervise_step({"sample": None, "spawned": {}, "aux": {}}, 500.0)

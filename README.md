@@ -80,6 +80,27 @@ The voice input desk runs locally on open-source models. Speech to text: [Fun-AS
 
 ## Quick start
 
+### Simplest: one prompt
+
+Make an empty folder, open Claude Code in it and paste this. It checks your machine, builds the folder layout for you and sets up your Premier with you, one step at a time.
+
+<details>
+<summary>The prompt (click to open)</summary>
+
+```text
+I want to set up my own Premier, an AI organization that runs from plain files, starting from this empty folder. Work one step at a time: before each step tell me in one or two sentences what you are about to do, and wait for my yes. Never ask me for a password, token or key. Never log in anywhere, send a message, register a scheduled task or spend money.
+
+1. Check that python (3.12 or newer), git and claude are on PATH (`python --version`, `git --version`, `claude --version`). If one is missing, stop and tell me how to install it.
+2. In this folder create `workspace`, clone https://github.com/Wonderfon/you-need-a-premier.git into `workspace\incore` (the folder must be named incore), create a virtual environment in `venv` here and install `workspace\incore\requirements\input-dashboard.txt` into it.
+3. Ask me my name. Copy `workspace\incore\instance\example\instance.json` to `workspace\incore\instance\instance.json` and fill it in: `workspace` is the full path of the `workspace` folder, `user_home` is a new empty folder `orghome` here, `owner_name` is my name. Show me the file before you write it.
+4. Read `workspace\incore\docs\start-session.md` and follow it: ask me one question at a time and write my first intent card, my line, my project and my first task rows, showing each file before you write it.
+5. Start the dashboard as step 5 of `workspace\incore\docs\start.md` shows, and give me one command to open it and one to stop it. If port 8765 is already taken, use another port as `start.md` says.
+```
+
+</details>
+
+### Or clone it yourself
+
 Two ways in. Pick the one that is you.
 
 1. **You are new to Premier.** Clone this repo and follow [docs/start.md](docs/start.md). About 30 minutes: you end with a dashboard that shows your first project. No account is needed; you sign in to Claude Code yourself.
@@ -89,4 +110,4 @@ Two ways in. Pick the one that is you.
 
 This repo is v0.1. In this package: the dashboard (`input/`), and [docs/start.md](docs/start.md), which takes you from a fresh clone to a dashboard that shows your first project; the guided setup session ([docs/start-session.md](docs/start-session.md)) that writes your intent card, lines, projects and first task rows; the plain-text task board; a separate reviewer step; the Pacer's usage gate (the scheduler code is in `control/` and is optional: nothing registers it for you); restoring a backup on a new computer ([docs/restore.md](docs/restore.md)); and an offline demo on made-up data (`demo/run_demo.py`). Not in this package yet: the History Keeper, a ready-to-use voice input desk (the speech-recognition code is included, but no models are bundled and start.md does not set it up), and step-by-step setup for Discord, mail and backups.
 
-More: [start](docs/start.md) · [restore from a backup](docs/restore.md) · [install contract](docs/install-contract.md) · [control queue notes](control/README.md) · [MIT license](LICENSE)
+More: [FAQ](docs/faq.md) · [start](docs/start.md) · [restore from a backup](docs/restore.md) · [install contract](docs/install-contract.md) · [control queue notes](control/README.md) · [MIT license](LICENSE)

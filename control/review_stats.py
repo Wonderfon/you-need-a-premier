@@ -266,6 +266,7 @@ def render(runs: list[dict], tick_log: list[dict], usage: list[dict], backlog: s
         out.append(f"另有 {len(stuck) - STUCK_MAX} 行更短的，没列。\n")
     if unknown:
         out.append(f"另有 {unknown} 行还没有时间记录（账本里没有这一行；从 {SEEN.name} 首次记下的时间算起，满 {STUCK_H} 小时后进表）。\n")
+    out.append(blocked_ready_section(review_snapshot(backlog, [], tk, now)["rows"], now.astimezone()))
     out.append(idle_section(runs, tick_log, usage, secs, backlog, tk, now, window_h))
     seen = [u for u in usage if u["_at"] > since and isinstance(u.get("utilization"), (int, float))]
     out.append("## 额度（usage.jsonl）\n")
@@ -309,6 +310,49 @@ def review_snapshot(backlog: str, tick_log: list[dict], tk, now: datetime, branc
             dispatch[names.get(role, role)] = {"at": row["_at"].isoformat(), "source": row.get("_source", "tick-log（行号未知）")}
     return {"version": 1, "as_of": now.isoformat(), "rows": rows, "history_done": history, "dispatch": dispatch,
             "branches": branches, "backlog_source": str(BACKLOG)}
+
+
+WAIT_DATE_RE = re.compile(r"(等(?:日期|到)?|定时[，,:：\s]*|截止[^\d；;。]*?)\s*"
+                          r"((?:20\d\d-)?\d{2}-\d{2})(?![\d-])(?:\s+([\dxX]+:[\dxX]+)(Z)?)?")
+WAIT_DONE_RE = re.compile(r"等[^「；;。]*「([^「」]+)」(?:那行|一行)?(?:返工)?(?:过审|完成)")
+DOTS_TASK_RE = re.compile(r"T-\d{8}-\d+\b")
+
+
+def blocked_ready_section(rows: list[dict], now: datetime) -> str:
+    """Report hints from status brackets only; `now` is in the runtime's local timezone. Never release rows."""
+    # ponytail: literal hints only; compound conditions remain the coordinator's manual check.
+    done = [r for r in rows if r["status"] == "done"]
+    body = []
+    for row in rows:
+        state = row["state"]
+        if row["status"] != "blocked" or any(s in state for s in ("等你决定", "暂停本项目", "等总理")):
+            continue
+        hits, evidence = [], []
+        for match in WAIT_DATE_RE.finditer(state):
+            prefix, value, hhmm, utc = match.groups()
+            clock = now.astimezone(timezone.utc) if utc else now
+            date = value if len(value) == 10 else f"{clock.year}-{value}"
+            try:
+                when = datetime.strptime(f"{date} {hhmm or '00:00'}", "%Y-%m-%d %H:%M")
+            except ValueError:
+                continue
+            if when > clock.replace(tzinfo=None):
+                continue
+            task = DOTS_TASK_RE.search(state) if prefix.startswith("截止") else None
+            hits.append("dotz 截止已过" if task else "等待日期已到")
+            evidence.append(f"{task[0] + '：' if task else ''}{date}{' ' + hhmm if hhmm else ''}"
+                            f"{'Z' if utc else '（本地时间）'}{'（无年按本次年份）' if len(value) == 5 else ''}")
+        for match in WAIT_DONE_RE.finditer(state):
+            source = next((r for r in done if r["section"] == row["section"] and match[1] in r["item"]), None)
+            if source:
+                hits.append("同小节前置已 done")
+                evidence.append(f"「{match[1]}」：backlog.md:{source['line']} [{source['state'][:40]}]")
+        if hits:
+            body.append([row["section"], row["item"][:60].replace("|", "/"), "、".join(dict.fromkeys(hits)),
+                         "；".join(evidence).replace("|", "/"), f"backlog.md:{row['line']}"])
+    return (f"## 等待条件可能已满足的 blocked 行（{len(body)} 行）\n\n"
+            "只报不改，命中不代表其他条件也已满足。日期按运行环境本地时间，Z 为 UTC；无年按本次年份，纯日期从当天 00:00 算。\n\n"
+            + (table(["小节", "行首 60 字", "命中哪类", "依据", "来源"], body) if body else "无\n"))
 
 
 def load_snapshot(path: Path) -> dict | None:

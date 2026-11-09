@@ -30,6 +30,12 @@ ul,ol{padding-left:1.4em}
 
 
 def inline(s):
+    def link(match):
+        label, target = match.groups()
+        if not re.match(r"^(?:https?:|[A-Za-z][A-Za-z0-9+.-]*://)", target, re.IGNORECASE):
+            target = re.sub(r":\d+(?:-\d+|–\d+)?$", "", target)
+        return f'<a href="{target}">{label}</a>'
+
     parts = re.split(r"(`[^`]+`)", s)
     out = []
     for p in parts:
@@ -38,7 +44,7 @@ def inline(s):
             continue
         p = html.escape(p)
         p = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", p)
-        p = re.sub(r"\[([^\]]+)\]\(([^)\s]+)\)", r'<a href="\2">\1</a>', p)
+        p = re.sub(r"\[([^\]]+)\]\(([^)\s]+)\)", link, p)
         out.append(p)
     return "".join(out)
 

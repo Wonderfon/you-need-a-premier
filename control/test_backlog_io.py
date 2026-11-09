@@ -163,7 +163,7 @@ class BacklogIO(unittest.TestCase):
     def test_scheduler_step_clears_owner_cards_each_round_not_only_at_start(self):
         import tick
         with unittest.mock.patch.object(tick.backlog_io, "clear_seen_owner_cards_hourly") as clear, \
-                unittest.mock.patch.object(tick, "spawn"), unittest.mock.patch.object(tick, "backup_watch"),unittest.mock.patch.object(tick, "website_watch"), \
+                unittest.mock.patch.object(tick, "spawn"), unittest.mock.patch.object(tick, "backup_watch"),unittest.mock.patch.object(tick, "website_watch"), unittest.mock.patch.object(tick, "machine_watch_step"), \
                 unittest.mock.patch.object(tick.dots_watch, "step"), unittest.mock.patch.object(tick.dots_review, "step"), \
                 unittest.mock.patch.object(tick, "fresh_usage", return_value=None), \
                 unittest.mock.patch.object(tick, "latest_usage", return_value=None), \

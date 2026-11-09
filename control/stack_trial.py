@@ -12,6 +12,8 @@ import sys
 from pathlib import Path
 import instance_config as ic  # noqa: E402  (this machine's paths and owner identity; defaults = today's values)
 
+from worktree_git import git_command
+
 # ---- CONFIG ----
 GIT = ic.V["git_exe"] if sys.platform == "win32" else "git"
 REPO = Path(ic.V["workspace"] + r"\incore")
@@ -28,9 +30,13 @@ CONFLICT_CONTEXT_CHARS = 6000  # per file, including line numbers and three cont
 
 
 def git(repo: Path, *args: str, raw: bool = False) -> tuple[int, str]:
-    p = subprocess.run([GIT, "-c", "safe.directory=*", "-c", "user.name=Claude", "-c", "user.email=noreply@anthropic.com", "-C", str(repo), *args],
-                       capture_output=True, text=True, encoding="utf-8", errors="replace")
-    return p.returncode, p.stdout if raw else p.stdout.strip()
+    try:
+        command = git_command(repo, "-c", "user.name=Claude", "-c", "user.email=noreply@anthropic.com", *args, native_git=GIT)
+        p = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    except (OSError, ValueError) as exc:
+        return 2, str(exc)
+    out = p.stdout if p.returncode == 0 else p.stdout + p.stderr
+    return p.returncode, out if raw else out.strip()
 
 
 def branches_from_backlog(text: str) -> list[str]:
@@ -111,7 +117,10 @@ def report_conflicts(repo: Path, head: str, branch: str, upstream: str) -> None:
 
 def stack(repo: Path, branches: list[str]) -> str | None:
     """Merge each branch onto the previous result starting at master; None after an inspection error or conflict."""
-    head = git(repo, "rev-parse", "master")[1]
+    rc, head = git(repo, "rev-parse", "master")
+    if rc:
+        print("cannot inspect master:", head)
+        return None
     upstream = "master"
     for b in branches:
         if not report_untracked_additions(repo, b):
@@ -122,7 +131,10 @@ def stack(repo: Path, branches: list[str]) -> str | None:
             print("\n".join(l for l in out.splitlines()[1:] if l.strip())[:1500])
             report_conflicts(repo, head, b, upstream)
             return None
-        head = git(repo, "commit-tree", out.splitlines()[0], "-p", head, "-p", b, "-m", "trial " + b)[1]
+        rc, head = git(repo, "commit-tree", out.splitlines()[0], "-p", head, "-p", b, "-m", "trial " + b)
+        if rc:
+            print("cannot create trial commit:", head)
+            return None
         print("ok", b, head[:9])
         upstream += " + " + b
     return head
@@ -156,7 +168,10 @@ def run_tests(repo: Path, head: str) -> bool:
     try:
         tar, root = tmp / "t.tar", tmp / "incore"  # some tests derive paths from the folder name `incore`
         root.mkdir()
-        subprocess.run([GIT, "-c", "safe.directory=*", "-C", str(repo), "archive", "-o", str(tar), head, *EXPORT], check=True)
+        rc, out = git(repo, "archive", "-o", str(tar), head, *EXPORT)
+        if rc:
+            print("cannot export trial:", out)
+            return False
         subprocess.run(["tar", "-xf", str(tar), "-C", str(root)], check=True)
         for name, args, cwd, group in test_jobs(root):
             py = PY_FOR.get(group, PY)

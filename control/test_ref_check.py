@@ -35,6 +35,12 @@ class ReferenceCheck(unittest.TestCase):
         result = self.check_text("`records/policy.json`、incore/records/\n")
         self.assertEqual((result["files"], result["references"], result["missing"]), (1, 2, []))
 
+    def test_directory_only_in_workspace_root_is_not_missing(self):
+        (self.workspace / "projects" / "driving-course-sim").mkdir(parents=True)
+        result = self.check_text("projects/driving-course-sim 与 projects/nowhere-x\n")
+        self.assertEqual((result["references"], [m["path"] for m in result["missing"]]),
+                         (2, ["projects/nowhere-x"]))
+
     def test_missing_file_reports_location_and_same_directory_candidates(self):
         result = self.check_text("# 规则\n出处：records/polciy.json\n")
         self.assertEqual(result["missing"], [{
@@ -62,12 +68,29 @@ class ReferenceCheck(unittest.TestCase):
                 result = self.check_text(f"见records/policy.json{suffix}\n")
                 self.assertEqual((result["references"], result["missing"]), (1, []))
 
-    def test_adjacent_references_and_unicode_names(self):
-        (self.root / "records" / "原话.json").write_text("{}", encoding="utf-8")
-        result = self.check_text("records/原话.json，audits/缺失.md:3）。\n")
+    def test_adjacent_ascii_references_are_still_checked(self):
+        result = self.check_text("records/policy.json，audits/missing.md:3）。\n")
         self.assertEqual(result["references"], 2)
-        self.assertEqual(result["missing"][0]["path"], "audits/缺失.md")
+        self.assertEqual(result["missing"][0]["path"], "audits/missing.md")
         self.assertEqual(result["missing"][0]["candidates"], [])
+
+    def test_chinese_prose_next_to_a_directory_is_not_a_reference(self):
+        result = self.check_text("records/会议的发言 与 audits/2026-11-07-中文主题。\n")
+        self.assertEqual((result["references"], result["missing"]), (0, []))
+
+    def test_complete_chinese_markdown_reference_is_checked(self):
+        (self.root / "audits").mkdir()
+        (self.root / "audits" / "2026-10-29-情报预筛.md").write_text("x", encoding="utf-8")
+        result = self.check_text("见 audits/2026-10-29-情报预筛.md，又见 audits/2026-10-30-缺失.md。\n")
+        self.assertEqual((result["references"], [m["path"] for m in result["missing"]]),
+                         (2, ["audits/2026-10-30-缺失.md"]))
+
+    def test_conditional_reference_is_counted_not_reported(self):
+        result = self.check_text("见 projects/taste/shared.md（文件存在的话）\n"
+                                 "See projects/taste/shared.md if it exists.\n"
+                                 "出处：records/polciy.json\n")
+        self.assertEqual((result["references"], result["conditional"]), (3, 2))
+        self.assertEqual([m["path"] for m in result["missing"]], ["records/polciy.json"])
 
     def test_cli_default_sources_include_workspace_agents_and_do_not_write(self):
         self.source.write_text("records/polciy.json\n", encoding="utf-8")
