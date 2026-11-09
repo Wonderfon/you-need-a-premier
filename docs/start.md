@@ -1,6 +1,6 @@
 # Start here: your own Premier in about 30 minutes
 
-Premier is a small organization of Claude Code sessions that works from files you can read: your intent, your projects, a task list, a dashboard. This page gets you from a fresh clone to a dashboard that shows your first project. Nothing is installed outside the folder you choose, no account is needed, and nothing is sent anywhere.
+Premier is a small organization of Claude Code sessions that works from files you can read: your intent, your projects, a task list, a dashboard. The Claude Code session you open in step 4 is your Premier (the files call this role the coordinator): it talks with you and steers the rest. This page gets you from a fresh clone to a dashboard that shows your first project. Nothing is installed outside the folder you choose, no account is needed, and nothing is sent anywhere.
 
 Already have a backup of a running Premier from another computer? Use [restore.md](restore.md) instead. This page is for starting new.
 
